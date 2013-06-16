@@ -52,7 +52,7 @@ if(_adminMenu != 'true') exit;
           if(empty($_POST['download'])) $show = error(_downloads_empty_download, 1);
           elseif(empty($_POST['url']))  $show = error(_downloads_empty_url, 1);
         } else {
-          
+
           if(preg_match("#^www#i",$_POST['url'])) $dl = links($_POST['url']);
           else                                    $dl = up($_POST['url']);
 

@@ -806,10 +806,10 @@ case 'details';
                                        "logo_gegner" => $logo_gegner,
 				                  			  		 "squad" => $show,
 				                  				  	 "squad_name" => re($get['name']),
-  			                  						 "gametype" => re($get['gametype']),
+  			                  						 "gametype" => empty($get['gametype']) ? '-' : re($get['gametype']),
 	  			                  					 "lineup" => preg_replace("#\,#","<br />",re($get['lineup'])),
 		  		                  					 "glineup" => preg_replace("#\,#","<br />",re($get['glineup'])),
-			  					                  	 "match_admins" => re($get['matchadmins']),
+			  					                  	 "match_admins" => empty($get['matchadmins']) ? '-' : re($get['matchadmins']),
                                        "datum" => _datum,
                                        "gegner" => _cw_head_gegner,
                                        "xonx" => _cw_head_xonx,
@@ -824,9 +824,9 @@ case 'details';
                                        "serverpwd" => $serverpwd,
                                        "cw_datum" => date("d.m.Y H:i", $get['datum'])._uhr,
                                        "cw_gegner" => $gegner,
-                                       "cw_xonx" => re($get['xonx']),
-                                       "cw_liga" => re($get['liga']),
-                                       "cw_maps" => re($get['maps']),
+									   "cw_xonx" => empty($get['xonx']) ? '-' : re($get['xonx']),
+									   "cw_liga" => empty($get['liga']) ? '-' : re($get['liga']),
+									   "cw_maps" => empty($get['maps']) ? '-' : re($get['maps']),
                                        "cw_server" => $server,
                                        "cw_result" => $result,
                                        "cw_bericht" => $bericht,
@@ -898,10 +898,13 @@ case 'details';
 													 `hp`       = '".links($_POST['hp'])."',
 													 `reg`      = '".((int)$userid)."',
 													 `comment`  = '".up($_POST['comment'],1)."',
-													 `ip`       = '".visitorIp()."'");
+													 `ip`       = '".$userip."'");
 		
-		
-                        wire_ipcheck("cwid(".$_GET['id'].")");
+						$cwid = "cwid(".$_GET['id'].")";
+						$qry = db("INSERT INTO ".$db['ipcheck']."
+											 SET `ip`   = '".$userip."',
+													 `what` = '".$cwid."',
+													 `time` = '".((int)time())."'");
 		
 						$index = info(_comment_added, "?action=details&amp;id=".$_GET['id']."");
 					}
@@ -1064,7 +1067,7 @@ case 'compreview';
                                             "avatar" => useravatar($get_userid),
                                             "onoff" => $onoff,
                                             "rank" => getrank($get_userid),
-                                            "ip" => visitorIp()._only_for_admins));
+                                            "ip" => $userip._only_for_admins));
     
   echo '<table class="mainContent" cellspacing="1">'.$index.'</table>';
   exit;

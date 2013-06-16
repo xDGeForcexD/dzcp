@@ -31,13 +31,15 @@ function kalender($month="",$year="")
     }
 
     $today = mktime(0,0,0,date("n"),date("d"),date("Y"));
-    $i = 1; $show = "";
+    $i = 1;
     while($i <= 31 && checkdate($monat, $i, $jahr))
     {
-	  $event = ""; $data = ""; $bdays = ""; $cws = "";
+      unset($event); unset($data); unset($bdays); unset($cws);
+
       for($iw = 1; $iw <= 7; $iw++)
       {
-		$titlecw = ""; $titlebd = ""; $titleev = "";
+        unset($titlecw);  unset($titlebd); unset($titleev);
+
         $datum = mktime(0,0,0,$monat,$i,$jahr);
         $wday = getdate($datum);
         $wday = $wday['wday'];

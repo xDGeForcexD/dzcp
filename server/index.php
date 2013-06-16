@@ -18,13 +18,14 @@ switch ($action):
 default:
   if(function_exists("fopen"))
   {
-    $qry = db("SELECT * FROM ".$db['server']." ORDER BY game");
+    $qry = db("SELECT * FROM ".$db['server']."
+               ORDER BY game");
     while($get = _fetch($qry))
     {
         $player_list = '';
         if($get['status'] != "nope" && file_exists(basePath.'/inc/server_query/'.$get['status'].'.php'))
         {
-          if(cache('gameserver_'.intval($get['id']).'_'.$language, config('cache_server'), 'c'))
+          if(time() - @filemtime(basePath.'/__cache/gameserver_'.intval($get['id']).'_'.$language.'.html') > $c['cache_server'])
           {
           if(!function_exists('server_query_'.$get['status']))
           {
@@ -210,9 +211,11 @@ default:
                                                     "name" => re($server['hostname']),
   									                            	  "image_map" => $image_map));
 
-		  cache('gameserver_'.intval($get['id']).'_'.$language, $index, 'w');
+          $fp = @fopen(basePath.'/__cache/gameserver_'.intval($get['id']).'_'.$language.'.html', 'w');
+                @fwrite($fp, $index);
+          @fclose($fp);
         } else {
-          $index = cache('gameserver_'.intval($get['id']).'_'.$language, null, 'r');
+          $index = @file_get_contents(basePath.'/__cache/gameserver_'.intval($get['id']).'_'.$language.'.html');
         }
       } else {
         if(!empty($get['pwd'])) $pwds = show(_server_pwd, array("pwd" => re($get['pwd'])));

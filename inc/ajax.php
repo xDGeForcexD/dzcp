@@ -33,10 +33,7 @@ switch ($action):
     echo '<table class="hperc" cellspacing="1">'.shout(1).'</table>';
   break;
   case 'teamspeak';
-    echo '<table class="hperc" cellspacing="0">'.teamspeak().'</table>';
-  break;
-  case 'xfire';
-      echo xfire($_GET['username']);
+    echo '<table class="hperc" cellspacing="0">'.teamspeak(1).'</table>';
   break;
 endswitch;
 ?>

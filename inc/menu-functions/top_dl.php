@@ -5,7 +5,6 @@ function top_dl()
   global $db,$maxtopdl,$ltopdl,$allowHover;
   $qry = db("SELECT * FROM ".$db['downloads']." ORDER BY hits DESC
              LIMIT ".$maxtopdl."");
-	$top_dl = "";
   while($get = _fetch($qry))
   {
     if($allowHover == 1)
@@ -22,4 +21,6 @@ function top_dl()
 
   return empty($top_dl) ? '' : '<table class="navContent" cellspacing="0">'.$top_dl.'</table>';
 }
+//-> Last Forumtopics
+
 ?>

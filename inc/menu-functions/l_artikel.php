@@ -7,8 +7,6 @@ function l_artikel()
 			   WHERE public = 1
                ORDER BY id DESC
                LIMIT ".$maxlartikel."");
-			   
-	$l_articles = "";
     if(_rows($qry))
     {
       while ($get = _fetch($qry))

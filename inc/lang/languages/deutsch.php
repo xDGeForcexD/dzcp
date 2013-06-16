@@ -1,43 +1,64 @@
 <?php
-## Charset ##
-define('_charset', 'iso-8859-1');
+$charset = 'iso-8859-1';
+header("Content-type: text/html; charset=".$charset);
 
-## ADDED FOR 1.6 Final
-define('_config_version', 'Mod/AddOns verwalten');
-define('_v_head', 'Mod/AddOn Versionen verwalten');
-define('_v_name', 'Mod/AddOn Name');
-define('_v_own', 'eigene Version');
-define('_v_server', 'aktuelle Version');
-define('_config_v_add', 'Mod/AddOn hinzuf&uuml;gen');
-define('_v_server_hover', 'Versionspr&uuml;fung auf');
-define('_v_unknown', 'unbekannt');
-define('_v_fsockopen_not_allowed', 'fsockopen nicht erlaubt');
-define('_v_no_data', 'Daten nicht abgerufen');
-define('_v_get_data', 'Daten abrufen');
-define('_v_server_id', 'Mod/AddOn ID auf Server');
-define('_v_download_link', 'Mod/AddOn Download Link');
-define('_v_added', 'Mod/AddOn hinzugef&uuml;gt');
-define('_v_edited', 'Mod/AddOn erfolgreich bearbeitet');
-define('_confirm_del_version', 'Es wird nur der Eintrag aus dieser Liste gel&ouml;scht, wirklich l&ouml;schen?');
-define('_v_no_server', 'Kein Kontrollserver');
+## ADDED / REDEFINED FOR 1.6 Final
+define(_txt_navi_main, 'Hauptnavigation');
+define(_txt_navi_clan, 'Clannavigation');
+define(_txt_navi_server, 'Servernavigation');
+define(_txt_navi_misc, 'Sonstiges');
+define(_txt_userarea, 'Benutzerbereich');
+define(_txt_vote, 'Umfragen');
+define(_txt_partners, 'Partner');
+define(_txt_sponsors, 'Sponsoren');
+define(_txt_counter, 'Statistik');
+define(_txt_l_news, 'Neuigkeiten');
+define(_txt_ftopics, 'Foreneintr&auml;ge');
+define(_txt_l_wars, 'Letzte Wars');
+define(_txt_n_wars, 'n&auml;chste Wars');
+define(_txt_teams, 'Teams');
+define(_txt_gallerie, 'Unsere Gallerien');
+define(_txt_top_match, 'Top Match');
+define(_txt_shout, 'Shoutbox');
+define(_txt_template_switch, 'Design &auml;ndern');
+define(_txt_events, 'Termine');
+define(_txt_kalender, 'Kalender');
+define(_txt_l_artikel, 'Artikel');
+define(_txt_l_reg, 'neue User');
+define(_txt_motm, 'Member of the Moment');
+define(_txt_random_gallery, 'zuf&auml;lliges Galleriebild');
+define(_txt_server, 'Server');
+define(_txt_teamspeak, 'Teamspeak');
+define(_txt_top_dl, 'Top Downloads');
+define(_txt_uotm, 'User of the Moment');
 
-define('_search_con_or', 'mind. ein Wort muss vorhanden sein');
-define('_search_con_and', 'absolute &Uuml;bereinstimmung');
-define('_search_con_andb', 'alle W&ouml;rter m&uuml;ssen vorhanden sein');
-define('_search_website','restliche Internetseite');
-define('_search_for_area_forum','Forum-Suchbereich');
+define(_gal_pics, 'Bilder in Gallerie');
+define(_config_slideshow, 'Slideshow');
+define(_perm_slideshow, 'Slideshow-Bilder verwalten');
+define(_slider, 'Slideshow');
+define(_slider_admin_add, 'Neues Slideshowbild hinzuf&uuml;gen');
+define(_slider_admin_add_done, 'Das Slideshowbild wurde erfolgreich eingef&uuml;gt');
+define(_slider_admin_del, 'Soll das Slideshowbild wirklich gel&ouml;scht werden');
+define(_slider_admin_del_done, 'Das Slideshowbild wurde erfolgreich gel&ouml;scht');
+define(_slider_admin_edit, 'Slideshowbild editieren');
+define(_slider_admin_edit_done, 'Die &Auml;nderungen wurden erfolgreich &uuml;bernommen!');
+define(_slider_admin_error_empty_bezeichnung, 'Du musst eine Bezeichnung eingeben');
+define(_slider_admin_error_empty_url, 'Du musst einen Link hinterlegen');
+define(_slider_admin_error_nopic, 'Du musst ein Bild hochladen');
+define(_slider_bezeichnung, 'Bezeichnung');
+define(_slider_new_window, 'Neues Fenster?');
+define(_slider_pic, 'Bild');
+define(_slider_desc, 'Beschreibung');
+define(_slider_position, 'Position');
+define(_slider_position_first, 'als erstes');
+define(_slider_position_lazy, '<option value="lazy">- nicht &auml;ndern -</option>');
+define(_slider_url, 'URL');
+define(_slider_show_title, 'Title anzeigen');
 
-define("_dzcp_vcheck", 'Der DZCP Versions Checker informiert dich &uuml;ber neue DZCP Updates und zeigt dir, ob DZCP.de erreichbar ist um deine Version mit der aktuellen zu vergleichen.<br><br><span class=fontBold>Beschreibung:</span><br><font color=#17D427>Gr&uuml;n:</font> Verbindung zu DZCP.de erfolgreich, Up to Date!<br><font color=#FFFF00>Gelb:</font> Keine Verbindung zu DZCP.de m&ouml;glich<br><font color=#FF0000>Rot:</font> Es ist ein neues Update verf&uuml;gbar!');
-define("_debug_on", 'Debug Modus ist aktiviert!');
-
-## Navigation / Server ##
-define('_navi_gsv_players_online', 'Online');
-define('_navi_gsv_on_the_game', 'Spieler');
-define('_navi_gsv_view_players', 'Spieler anzeigen');
-define('_navi_gsv_game', 'Spiel');
-define('_navi_gsv_no_name_available', 'Server name nicht vorhanden');        
-define('_navi_gsv_no_players_available', 'Keine Spieler online');
-define('_navi_gsv_password', 'Passwort');
+define(_news_userimage, 'Eigenes Newsbild');
+define(_newspic_del, 'Newsbild l&ouml;schen?');
+define(_newspic_deleted, 'Newsbild erfolgreich gel&ouml;scht');
+define('_max', 'max.');
 
 ## ADDED / REDEFINED FOR 1.5 Final
 define('_id_dont_exist', 'Die von dir angegebene ID existiert nicht!');
@@ -75,7 +96,7 @@ define('_menukat_deleted', 'Die Menu Kategorie wurde erfolgreich gel&ouml;scht!'
 define('_menu_visible', 'sichtbar f&uuml;r Status');
 define('_menu_kat_info', 'Die CSS-Klassen f&uuml;r die Links werden automatisch vom Template Platzhalter abgeleitet.<br />z.B. f&uuml;r den Platzhalter <i>[nav_main]</i> lautet die CSS-Klasse <i>a.navMain</i>');
 define('_admin_sqauds_roster', 'Team-Roster');
-define('_admin_squads_nav_info', 'Hiermit wird ein Direktlink in die Navigation gesetzt, welcher zur Vollansicht des Teams f&uuml;hrt.');
+define('_admin_squads_nav_info', 'Hiermit wird ein Direktlink in die Navigation gesetzt, welcher zur Vollansicht des Teams führt.');
 define('_admin_squads_teams', 'Team-Show');
 define('_admin_squads_no_navi', 'Nicht einf&uuml;gen');
 define('_seconds', 'Sekunden');
@@ -92,7 +113,7 @@ define('_config_fotum_vote', 'Forum-Vote');
 define('_config_fotum_vote_info', '<center>Zeigt die Forum-Votes auch unter Umfragen an.</center>');
 ## ADDED / REDEFINED FOR 1.5
 define('_side_membermap', 'Mitgliederkarte');
-define('_installdir', "<tr><td colspan=\"15\" class=\"contentMainFirst\"><br /><center><b>Achtung! Sicherheitsrisiko!!</b><br><br>Bitte l&ouml;sche zuerst den Ordner <b>'/_installer'</b> von deinem Webspace.</center><br /></td></tr>");
+define('_installdir', "<tr><td colspan=\"15\" class=\"contentMainFirst\"><br /><center><b>Achtung! Sicherheitsrisiko!!</b><br><br>Bitte l&ouml;sche zuerst den Ordner <b>'/_installer'</b> von deinem Webspace. Erst dann steht das Adminmenü zur Verfügung!</center><br /></td></tr>");
 define('_no_ts', 'kein Teamspeak eingetragen');
 define('_search_sites', 'Unterseiten');
 define('_search_results', 'Suchergebnisse');
@@ -156,7 +177,7 @@ define('_sponsors_admin_head', 'Sponsoren');
 define('_sponsors_admin_add', 'Sponsor hinzuf&uuml;gen');
 define('_sponsor_added', 'Sponsor erfolgreich hinzugef&uuml;gt!');
 define('_sponsor_edited', 'Sponsor erfolgreich editiert!');
-define('_sponsor_deleted', 'Sponsor erfolgreich gel&ouml;scht!');
+define('_sponsor_deleted', 'Sponsor erfolgreich gelöscht!');
 define('_sponsor_name', 'Sponsor');
 define('_sponsors_admin_name', 'Name');
 define('_sponsors_admin_site', 'Sponsorenseite');
@@ -183,7 +204,7 @@ define('_away_new', 'Melden');
 define('_away_empty_titel', 'Bitte einen Grund angeben');
 define('_away_empty_reason', 'Bitte ein Kommentar angeben');
 define('_away_error_1', 'Das Enddatum darf nicht gleich sein wie das Startdatum!');
-define('_away_error_2', 'Das Startdatum ist gr&ouml;ßer als das Enddatum!');
+define('_away_error_2', 'Das Startdatum ist größer als das Enddatum!');
 define('_away_to', 'bis');
 define('_away_to2', 'zum');
 define('_away_head', 'Abwesenheitsliste');
@@ -216,9 +237,9 @@ define('_config_c_events', 'Men&uuml;: Events');
 define('_news_send', 'News einsenden');
 define('_news_send_source', 'Quelle');
 define('_news_send_titel', 'Newsvorschlag von [nick]');
-define('_news_send_note', 'Mitteilung o. Hinweis f&uuml;r die Redaktion');
+define('_news_send_note', 'Mitteilung o. Hinweis für die Redaktion');
 define('_news_send_done', 'Vielen Dank! Die News wurde erfolgreich an die Redaktion weitergeleitet');
-define('_news_send_description', 'Liebe Besucher,<br /><br />mit dem folgenden Formular ist es m&ouml;glich im Netz gefundene, oder selbst erstellte News an uns zu senden. Der von Dir ausgef&uuml;llte Formularinhalt wird dann mittels eines Verteilers an unsere Redakteure weitergeleitet. Bitte bedenke, dass wir jede Einsendung aufbereiten und evtl. genauere Details recherchieren m&uuml;ssen, um die gewohnte Qualit&Auml;t unserer News beizubehalten. Dies f&Auml;llt uns nat&uuml;rlich leichter, wenn Deine Einsendung bereits viele Einzelheiten aufweist und selbst formulierte Texte beinhaltet. Meldungen die lediglich 1:1 von anderen Seiten kopiert wurden, erschweren unsere Arbeit und verhindern nicht selten eine Ver&ouml;ffentlichung der Einsendung auf unserer Hauptseite.<br /><br />Nat&uuml;rlich sind wir &uuml;ber jede von Dir eingesendete News dankbar und freuen uns &uuml;ber das Engagement unserer Besucher.<br /><br />Vielen Dank im Voraus.<br /><br />Dein Redaktions-Team');
+define('_news_send_description', 'Liebe Besucher,<br /><br />mit dem folgenden Formular ist es möglich im Netz gefundene, oder selbst erstellte News an uns zu senden. Der von Dir ausgefüllte Formularinhalt wird dann mittels eines Verteilers an unsere Redakteure weitergeleitet. Bitte bedenke, dass wir jede Einsendung aufbereiten und evtl. genauere Details recherchieren müssen, um die gewohnte Qualität unserer News beizubehalten. Dies fällt uns natürlich leichter, wenn Deine Einsendung bereits viele Einzelheiten aufweist und selbst formulierte Texte beinhaltet. Meldungen die lediglich 1:1 von anderen Seiten kopiert wurden, erschweren unsere Arbeit und verhindern nicht selten eine Veröffentlichung der Einsendung auf unserer Hauptseite.<br /><br />Natürlich sind wir über jede von Dir eingesendete News dankbar und freuen uns über das Engagement unserer Besucher.<br /><br />Vielen Dank im Voraus.<br /><br />Dein Redaktions-Team');
 define('_contact_text_sendnews', '
 [nick] hat uns ein Newsvorschlag eingesendet!<p>&nbsp;</p><p>&nbsp;</p>
 <span class="fontBold">Nick:</span> [nick]<p>&nbsp;</p>
@@ -230,7 +251,7 @@ define('_contact_text_sendnews', '
 
 define('_msg_sendnews_user', '
 <tr>
-  <td align="center" class="contentMainTop"><span class="fontBold">Damit die anderen Redakteure wissen, dass du diese News ver&ouml;ffentlichen wirst,<br />klicke bitte auf den nachfolgenden Button. Danke</span></td>
+  <td align="center" class="contentMainTop"><span class="fontBold">Damit die anderen Redakteure wissen, dass du diese News veröffentlichen wirst,<br />klicke bitte auf den nachfolgenden Button. Danke</span></td>
 </tr>
 <tr>
   <td align="center" class="contentMainTop">
@@ -238,7 +259,7 @@ define('_msg_sendnews_user', '
       <input type="hidden" name="action" value="msg" />
       <input type="hidden" name="do" value="sendnewsdone" />
       <input type="hidden" name="id" value="[id]" />
-	  <input type="hidden" name="datum" value="[datum]" />
+      <input type="hidden" name="datum" value="[datum]" />
       <input id="contentSubmit" type="submit" class="submit" value="Best&auml;tigen" />
     </form>
   </td>
@@ -247,7 +268,7 @@ define('_msg_sendnews_done', '
 <tr>
   <td align="center" class="contentMainTop"><span class="fontRed">Diese News wird/wurde bereits von [user] bearbeitet!!!</span></td>
 </tr>');
-define('_send_news_done', 'Vielen Dank f&uuml;r das Best&auml;tigen und das einstellen des Newsvoschlags!');
+define('_send_news_done', 'Vielen Dank für das Best&auml;tigen und das einstellen des Newsvoschlags!');
 define('_msg_all_leader', "alle Leader & Co-Leader");
 define('_msg_leader', "Squad-Leader");
 define('_pos_nletter', 'Diese Position in Newsletter an Squadleader und Co-Leader mit einbeziehen');
@@ -264,7 +285,7 @@ define('_admin_fabo_tedit_subj', 'Betreff: ForenAbo Thread editiert');
 define('_admin_fabo_npost', 'ForenAbo Neuer Post Template');
 define('_admin_fabo_pedit', 'ForenAbo Post editiert Template');
 define('_admin_fabo_tedit', 'ForenAbo Thread editiert Template');
-define('_foum_fabo_checkbox', 'Diesen Thread abonnieren und per E-Mail &uuml;ber neue Posts benachrichtigt werden?');
+define('_foum_fabo_checkbox', 'Diesen Thread abonnieren und per E-Mail über neue Posts benachrichtigt werden?');
 define('_forum_fabo_do', 'E-Mail Benachrichtigung erfolgreich ge&auml;ndert!');
 define('_user_link_fabo', '[nick]');
 define('_forum_vote_del', 'Umfrage l&ouml;schen');
@@ -392,6 +413,8 @@ define('_glossar_erkl', 'Erkl&auml;rung');
 define('_admin_support_head', 'Support Informationen');
 define('_admin_support_info', 'Nachfolgende Informationen bitte bei einer Supportanfrage z.B.im Forum von <a href="http://www.dzcp.de" target="_blank">www.dzcp.de</a> mit angeben, um schneller zu einer L&ouml;sung des Problemes zu kommen!');
 define('_config_support', 'Supportinfos');
+define('_search_con_or', 'ODER-Verkn&uuml;pfung');
+define('_search_con_and', 'UND-Verkn&uuml;pfung');
 define('_search_head', 'Suchfunktion');
 define('_search_word', 'Suchen nach...');
 define('_search_forum_all', 'In allen Foren suchen');
@@ -445,7 +468,7 @@ define('_confirm_del_galpic', 'Soll dieses Bild wirklich geloescht werden');
 define('_confirm_del_gallery', 'Soll diese Galerie wirklich geloescht werden');
 define('_confirm_del_entry', 'Soll dieser Eintrag wirklich geloescht werden');
 define('_confirm_del_navi', 'Soll dieser Link wirklich geloescht werden');
-define('_confirm_del_profil', 'Soll dieses Profilfeld wirklich geloescht werden? \n Alle Usereingaben f&uuml;r dieses Feld gehen dabei verloren!');
+define('_confirm_del_profil', 'Soll dieses Profilfeld wirklich geloescht werden? \n Alle Usereingaben für dieses Feld gehen dabei verloren!');
 define('_confirm_del_smiley', 'Soll dieser Smiley wirklich geloescht werden');
 define('_confirm_del_kat', 'Soll diese Kategorie wirklich geloescht werden');
 define('_confirm_del_news', 'Soll diese News wirklich geloescht werden');
@@ -604,7 +627,7 @@ define('_editor_from', 'Von');
 define('intern', '<span class="fontWichtig">Intern</span>');
 define('_comments_head', 'Kommentare');
 define('_click_close', 'schlie&szlig;en');
-## Begr&uuml;ßungen ##
+## Begrüßungen ##
 define('_welcome_18', 'Guten Abend,');
 define('_welcome_13', 'Guten Tag,');
 define('_welcome_11', 'Mahlzeit,');
@@ -793,7 +816,7 @@ define('_country_list', '
 <option value="zm"> Zambia</option>
 <option value="cf"> Zentralafrikan. Republik</option>
 <option value="cy"> Zypern</option>');
-## Globale Userr&Auml;nge ##
+## Globale Userränge ##
 define('_status_banned', 'gesperrt');
 define('_status_unregged', 'unregistriert');
 define('_status_user', 'User');
@@ -891,7 +914,7 @@ define('_forum_search_results', 'Suchergebnisse');
 define('_forum_online_head', 'Im Forum online:');
 define('_forum_nobody_is_online', 'Zur Zeit ist kein User im Forum online!');
 define('_forum_nobody_is_online2', 'Zur Zeit ist kein User außer dir im Forum online!');
-## G&Auml;stebuch ##
+## Gästebuch ##
 define('_gb_delete_successful', 'Der Eintrag wurde erfolgreich gel&ouml;scht!');
 define('_gb_head', 'G&auml;stebuch');
 define('_gb_add_head', 'Neuer G&auml;stebucheintrag');
@@ -1414,7 +1437,7 @@ define('_user_delete_verify', '
 <tr>
   <td class="contentMainFirst" align="center">
     Bist du dir sicher das du den User [user] l&ouml;schen willst?<br />
-    <span class="fontUnder">Alle</span> Aktivit&auml;ten dieses Users auf dieser Seite werden damit gel&ouml;scht!<br /><br /> 
+    <span class="fontUnder">Alle</span> Aktivit&auml;ten dieses Users auf dieser Seite werden damit gel&ouml;scht!<br /><br />
     <a href="?action=admin&amp;do=delete&verify=yes&amp;id=[id]">Ja, l&ouml;schen!</a>
   </td>
 </tr>');
@@ -1584,11 +1607,11 @@ Gestaltung, die Inhalte oder die Urheberschaft der verlinkten/verkn&uuml;pften S
 <br /><h2><span class="fontBold">3. Urheber- und Kennzeichenrecht</span></h2>
 <br />
 Der Autor ist bestrebt, in allen Publikationen die Urheberrechte der verwendeten Bilder, Grafiken, Tondokumente, Videosequenzen und Texte
-zu beachten, von ihm selbst erstellte Bilder, Grafiken, Tondokumente, Videosequenzen und Texte zu nutzen oder auf lizenzfreie Grafiken, Tondokumente, Videosequenzen und Texte zur&uuml;ckzugreifen. 
+zu beachten, von ihm selbst erstellte Bilder, Grafiken, Tondokumente, Videosequenzen und Texte zu nutzen oder auf lizenzfreie Grafiken, Tondokumente, Videosequenzen und Texte zur&uuml;ckzugreifen.
 <br />
 Alle innerhalb des Internetangebotes genannten und ggf. durch Dritte gesch&uuml;tzten Marken- und Warenzeichen unterliegen uneingeschr&auml;nkt den Bestimmungen des jeweils g&uuml;ltigen Kennzeichenrechts und den Besitzrechten der jeweiligen eingetragenen Eigent&uuml;mer. Allein aufgrund der blo&szlig;en Nennung ist nicht der Schluss zu ziehen, dass Markenzeichen nicht durch Rechte Dritter gesch&uuml;tzt sind!
 <br />
-Das Copyright f&uuml;r ver&ouml;ffentlichte, vom Autor selbst erstellte Objekte bleibt allein beim Autor der Seiten. 
+Das Copyright f&uuml;r ver&ouml;ffentlichte, vom Autor selbst erstellte Objekte bleibt allein beim Autor der Seiten.
 Eine Vervielf&auml;ltigung oder Verwendung solcher Grafiken, Tondokumente, Videosequenzen und Texte in anderen elektronischen oder gedruckten Publikationen ist ohne ausdr&uuml;ckliche Zustimmung des Autors nicht gestattet.
 <br />
 <br /><h2><span class="fontBold">4. Datenschutz</span></h2>
@@ -1964,7 +1987,7 @@ define('_error_user_exists', 'Der Loginname ist leider schon vergeben!');
 define('_error_email_exists', 'Die von dir angegebene EMailadresse wird schon von jemandem verwendet!');
 define('_info_edit_profile_done_pwd', 'Du hast dein Profil erfolgreich editiert!');
 define('_error_select_buddy', 'Du hast keinen User angegeben!');
-define('_error_buddy_self', 'Du kannst dich nicht selbst als Buddy eintragen!');
+define('_error_buddy_self', 'Du kannst dich nicht selbst als Buddy adden!');
 define('_error_buddy_already_in', 'Der User steht schon in deiner Buddyliste!');
 define('_error_msg_self', 'Du kannst dir nicht selber eine Nachricht schreiben!');
 define('_error_back', 'zur&uuml;ck');
@@ -2081,8 +2104,8 @@ define('_info', 'Info');
 define('_error', 'Fehler');
 define('_datum', 'Datum');
 define('_legende', 'Legende');
-define('_xfire_name', 'Xfire Name');
-define('_xfire', 'Xfire');
+define('_hlswid', 'XFire Name');
+define('_hlswstatus', 'XFire');
 define('_steamid', 'Steam-ID');
 define('_link', 'Link');
 define('_linkname', 'Linkname');

@@ -16,7 +16,7 @@ function random_gallery()
   {
     $gallery = show("menu/random_gallery", array("image" => $imgArr[0],
                                                  "id"    => $get['id'],
-          							                         "kat"   => re($get['kat'])));
+                                                               "kat"   => re($get['kat'])));
   }
 
   return empty($gallery) ? '' : '<table class="navContent" cellspacing="0">'.$gallery.'</table>';

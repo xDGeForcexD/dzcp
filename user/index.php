@@ -9,7 +9,6 @@ $time_start = generatetime();
 lang($language);
 $dir = "user";
 $where = _site_user;
-$index = "";
 ## SECTIONS ##
 if(!isset($_GET['action'])) $action = "";
 else $action = $_GET['action'];
@@ -26,123 +25,157 @@ case 'login';
       if(checkpwd($_POST['user'], md5($_POST['pwd'])))
       {
         $qry = db("SELECT id,user,nick,pwd,email,level,time FROM ".$db['users']."
-  		    	    	 WHERE user = '".up($_POST['user'])."'
+                           WHERE user = '".up($_POST['user'])."'
                    AND pwd = '".md5($_POST['pwd'])."'
                    AND level != '0'");
-  	    $get = _fetch($qry);
+          $get = _fetch($qry);
 
+        $permanent_key = '';
         if(isset($_POST['permanent']))
         {
-		      set_cookie($prev."id",$get['id']);
-		      set_cookie($prev."pwd",$get['pwd']);
+              set_cookie($prev."id",$get['id']);
+              $permanent_key = md5(mkpwd(8));
+              set_cookie($prev."pkey",$permanent_key);
         }
 
-		$userip = visitorIp();
+        ## Aktualisiere Datenbank ##
+        db("UPDATE ".$db['users']." SET `online` = '1', `sessid` = '".session_id()."', `ip` = '".$_SESSION['ip']."', `pkey` = '".$permanent_key."' WHERE id = '".$get['id']."'");
+
+
         $_SESSION['id']         = $get['id'];
         $_SESSION['pwd']        = $get['pwd'];
         $_SESSION['lastvisit']  = $get['time'];
-		$_SESSION['ip']         = $userip;
+        $_SESSION['ip']         = $userip;
 
-    		$upd = db("UPDATE ".$db['userstats']."
-		      				 SET `logins` = logins+1
-				     			 WHERE user = ".$get['id']);
+            $upd = db("UPDATE ".$db['userstats']."
+                               SET `logins` = logins+1
+                                  WHERE user = ".$get['id']);
 
         $upd = db("UPDATE ".$db['users']."
-		    	 				 SET `online` = '1',
+                                  SET `online` = '1',
                        `sessid` = '".session_id()."',
-                       `ip`     = '".$userip."'
-						       WHERE id = ".$get['id']);
+                       `ip`     = '".$userip."',
+                       `pkey` = '".$permanent_key."'
+                               WHERE id = ".$get['id']);
 
-        wire_ipcheck("login(".$get['id'].")");
+        $protocol = "login(".$get['id'].")";
+        $upd = db("INSERT INTO ".$db['ipcheck']."
+                   SET `ip`   = '".$userip."',
+                       `what` = '".$protocol."',
+                       `time` = '".((int)time())."'");
 
-      	header("Location: ?action=userlobby");
+          header("Location: ?action=userlobby");
       }	else {
-        $qry = db("SELECT id FROM ".$db['users']." WHERE user = '".up($_POST['user'])."'");
-  	    if(_rows($qry))
+        $qry = db("SELECT id FROM ".$db['users']."
+                           WHERE user = '".up($_POST['user'])."'");
+          if(_rows($qry))
         {
           $get = _fetch($qry);
-		  wire_ipcheck("trylogin(".$get['id'].")");
+
+          $protocol = "trylogin(".$get['id'].")";
+          $upd = db("INSERT INTO ".$db['ipcheck']."
+                   SET `ip`   = '".$userip."',
+                       `what` = '".$protocol."',
+                       `time` = '".((int)time())."'");
         }
-		
         set_cookie($prev."id","");
-        set_cookie($prev."pwd","");
+        set_cookie($prev."pkey","");
 
         $index = error(_login_pwd_dont_match);
       }
     }
   } else {
     if($chkMe == "unlogged")
-	  {
+      {
       if($secureLogin == 1)
       {
         $secure = show($dir."/secure", array("help" => _login_secure_help,
                                              "security" => _register_confirm));
       }
 
-	    $index = show($dir."/login", array("loginhead" => _login_head,
-			  							 "loginname" => _loginname,
+        $index = show($dir."/login", array("loginhead" => _login_head,
+                                                                                "loginname" => _loginname,
+                                         "dis" => $dis,
                                          "secure" => $secure,
-				  						 "lostpwd" => _login_lostpwd,
+                                                                               "lostpwd" => _login_lostpwd,
                                          "permanent" => _login_permanent,
-						  				 "pwd" => _pwd));
-	  } else {
-		  $index = error(_error_user_already_in, 1);
+                                                                               "pwd" => _pwd));
+      } else {
+          $index = error(_error_user_already_in, 1);
       set_cookie($prev."id","");
-      set_cookie($prev."pwd","");
-	  }
+      set_cookie($prev."pkey","");
+      }
   }
 break;
 case 'lostpwd';
   $where = _site_user_lostpwd;
   if($chkMe == "unlogged")
-	{
-		$index = show($dir."/lostpwd", array("head" => _lostpwd_head,
-																				 "name" => _loginname,
+    {
+        $index = show($dir."/lostpwd", array("head" => _lostpwd_head,
+                                                                                 "name" => _loginname,
                                          "value" => _button_value_send,
                                          "security" => _register_confirm,
-																				 "email" => _email));
+                                                                                 "email" => _email));
 
-		if($_GET['do'] == "sended")
-	  {
-			$qry = db("SELECT id,user,level,pwd FROM ".$db['users']."
-								 WHERE user= '".$_POST['user']."'
-								 AND email = '".$_POST['email']."'");
+        if($_GET['do'] == "sended")
+      {
+            $qry = db("SELECT id,user,level,pwd FROM ".$db['users']."
+                                 WHERE user= '".$_POST['user']."'
+                                 AND email = '".$_POST['email']."'");
       $get = _fetch($qry);
 
-			if(_rows($qry) && ($_POST['secure'] == $_SESSION['sec_lostpwd'] && $_SESSION['sec_lostpwd'] != NULL))
-		  {
+            if(_rows($qry) && ($_POST['secure'] == $_SESSION['sec_lostpwd'] && $_SESSION['sec_lostpwd'] != NULL))
+          {
         $pwd = mkpwd();
-        db("UPDATE ".$db['users']."
+        $upd = db("UPDATE ".$db['users']."
                    SET `pwd` = '".md5($pwd)."'
                    WHERE user = '".$_POST['user']."'
                    AND email = '".$_POST['email']."'");
 
-        wire_ipcheck("pwd(".$get['id'].")");
-        $message = show(settings('eml_pwd'), array("user" => $_POST['user'], "pwd" => $pwd));
-        $subject = settings('eml_pwd_subj');
+        $protocol = "pwd(".$get['id'].")";
+        $upd = db("INSERT INTO ".$db['ipcheck']."
+                   SET `ip`   = '".$userip."',
+                       `what` = '".$protocol."',
+                       `time` = '".((int)time())."'");
 
-	      sendMail($_POST['email'],$subject,$message);
+                $message = show(re(settings('eml_pwd')), array("user" => $_POST['user'],
+                                                                                                     "pwd" => $pwd));
+                $subject = re(settings('eml_pwd_subj'));
 
-  			$index = info(_lostpwd_valid, "../user/?action=login");
-			} else {
-        wire_ipcheck("trypwd(".$get['id'].")");
+          sendMail($_POST['email'],$subject,$message);
+
+              $index = info(_lostpwd_valid, "../user/?action=login");
+            } else {
+        $protocol = "trypwd(".$get['id'].")";
+        $upd = db("INSERT INTO ".$db['ipcheck']."
+                 SET `ip`   = '".$userip."',
+                     `what` = '".$protocol."',
+                     `time` = '".((int)time())."'");
+
         if($_POST['secure'] != $_SESSION['sec_lostpwd'] || empty($_SESSION['sec_lostpwd']))
           $index = error(_error_invalid_regcode,1);
-				else $index = error(_lostpwd_failed, 1);
-			}
-		}
-	} else {
-		$index = error(_error_user_already_in, 1);
-	}
+                else $index = error(_lostpwd_failed, 1);
+            }
+        }
+    } else {
+        $index = error(_error_user_already_in, 1);
+    }
 break;
 case 'logout';
   $where = _site_user_logout;
-  db("UPDATE ".$db['users']." SET online = '0', sessid = '' WHERE id = '".$userid."'");
+    $qry = db("UPDATE ".$db['users']."
+                      SET online = '0',
+               sessid = ''
+                     WHERE id = '".$userid."'");
 
-  wire_ipcheck("logout(".$userid.")");
+  $protocol = "logout(".$userid.")";
+  $upd = db("INSERT INTO ".$db['ipcheck']."
+             SET `ip`   = '".$userip."',
+                 `what` = '".$protocol."',
+                 `time` = '".((int)time())."'");
 
   set_cookie($prev.'id', '');
-  set_cookie($prev.'pwd', '');
+  set_cookie($prev.'pkey',"");
   set_cookie(session_name(), '');
 
   session_unset();
@@ -155,7 +188,7 @@ case 'register';
   $where = _site_reg;
   $check_regcode = settings("regcode");
   if($chkMe == "unlogged")
-	{
+    {
     if($check_regcode == 1)
     {
       $regcode = show($dir."/register_regcode", array("confirm" => _register_confirm,
@@ -165,80 +198,80 @@ case 'register';
     }
 
     $index = show($dir."/register", array("registerhead" => _register_head,
-										  "error" => "",
-										  "name" => _loginname,
-										  "nick" => _nick,
-        	                              "pwd" => _pwd,
-										  "pwd2" => _pwd2,
-										  "email" => _email,
-										  "r_name" => "",
-										  "r_nick" => "",
-										  "r_email" => "",
-										  "pflicht" => _contact_pflichtfeld,
-										  "value" => _button_value_reg,
-                	                      "regcode" => $regcode));
-	} else {
-		$index = error(_error_user_already_in, 1);
-	}
+                                          "error" => "",
+                                          "name" => _loginname,
+                                          "nick" => _nick,
+                                          "pwd" => _pwd,
+                                          "pwd2" => _pwd2,
+                                          "email" => _email,
+                                          "r_name" => "",
+                                          "r_nick" => "",
+                                          "r_email" => "",
+                                          "pflicht" => _contact_pflichtfeld,
+                                          "value" => _button_value_reg,
+                                          "regcode" => $regcode));
+    } else {
+        $index = error(_error_user_already_in, 1);
+    }
 
   if ($_GET['do'] == "add")
   {
-		$check_user = db("SELECT id FROM ".$db['users']."
-											WHERE user = '".$_POST['user']."'");
-		$check_nick = db("SELECT id FROM ".$db['users']."
-											WHERE nick = '".$_POST['nick']."'");
-		$check_email = db("SELECT id FROM ".$db['users']."
-											 WHERE email = '".$_POST['email']."'");
-                       
-    $_POST['user'] = trim($_POST['user']); $_POST['nick'] = trim($_POST['nick']);    
-	  if(empty($_POST['user']) || empty($_POST['nick']) || empty($_POST['email']) || ($_POST['pwd'] != $_POST['pwd2']) || ($check_regcode == 1 && ($_POST['confirm'] != $_SESSION['sec_reg'] || $_SESSION['sec_reg'] == NULL)) || _rows($check_user) || _rows($check_nick) || _rows($check_email))
-    {
-    
-		if($check_regcode == 1 && ($_POST['confirm'] != $_SESSION['sec_reg'] || $_SESSION['sec_reg'] == NULL)) $error = show("errors/errortable", array("error" => _error_invalid_regcode));
-		if($_POST['pwd2'] != $_POST['pwd']) $error = show("errors/errortable", array("error" => _wrong_pwd));
-		if(!check_email($_POST['email'])) $error = show("errors/errortable", array("error" => _error_invalid_email));
-		if(empty($_POST['email'])) $error = show("errors/errortable", array("error" => _empty_email));
-		if(_rows($check_email)) $error = show("errors/errortable", array("error" => _error_email_exists));
-		if(empty($_POST['nick'])) $error = show("errors/errortable", array("error" => _empty_nick));
-		if(_rows($check_nick)) $error = show("errors/errortable", array("error" => _error_nick_exists));
-		if(empty($_POST['user'])) $error = show("errors/errortable", array("error" => _empty_user));
-		if(_rows($check_user)) $error = show("errors/errortable", array("error" => _error_user_exists));
-        
-	    if($check_regcode == 1)
-		{
-		  $regcode = show($dir."/register_regcode", array("confirm" => _register_confirm,
-														  "confirm_add" => _register_confirm_add,));
-		} else {
-		  $regcode = "";
-		}
-		
-		$index = show($dir."/register", array("registerhead" => _register_head,
-											  "error" => $error,
-											  "name" => _loginname,
-											  "nick" => _nick,
-        	              "pwd" => _pwd,
-											  "pwd2" => _pwd2,
-											  "email" => _email,
-											  "r_name" => $_POST['user'],
-											  "r_nick" => $_POST['nick'],
-											  "r_email" => $_POST['email'],
-"pflicht" => _contact_pflichtfeld,
-											  "value" => _button_value_reg,
-                	                          "regcode" => $regcode));
-	} else {
-          
-		if(empty($_POST['pwd']))
-		{  
-		  $mkpwd = mkpwd();
-		  $pwd = md5($mkpwd);
-		  $msg = _info_reg_valid;
-		} else {
-		  $mkpwd = $_POST['pwd'];
-		  $pwd = md5($mkpwd);
-		  $msg = _info_reg_valid_pwd;
-		}
+        $check_user = db("SELECT id FROM ".$db['users']."
+                                            WHERE user = '".$_POST['user']."'");
+        $check_nick = db("SELECT id FROM ".$db['users']."
+                                            WHERE nick = '".$_POST['nick']."'");
+        $check_email = db("SELECT id FROM ".$db['users']."
+                                             WHERE email = '".$_POST['email']."'");
 
-			$qry = db("INSERT INTO ".$db['users']."
+    $_POST['user'] = trim($_POST['user']); $_POST['nick'] = trim($_POST['nick']);
+      if(empty($_POST['user']) || empty($_POST['nick']) || empty($_POST['email']) || ($_POST['pwd'] != $_POST['pwd2']) || ($check_regcode == 1 && ($_POST['confirm'] != $_SESSION['sec_reg'] || $_SESSION['sec_reg'] == NULL)) || _rows($check_user) || _rows($check_nick) || _rows($check_email))
+    {
+
+        if($check_regcode == 1 && ($_POST['confirm'] != $_SESSION['sec_reg'] || $_SESSION['sec_reg'] == NULL)) $error = show("errors/errortable", array("error" => _error_invalid_regcode));
+        if($_POST['pwd2'] != $_POST['pwd']) $error = show("errors/errortable", array("error" => _wrong_pwd));
+        if(!check_email($_POST['email'])) $error = show("errors/errortable", array("error" => _error_invalid_email));
+        if(empty($_POST['email'])) $error = show("errors/errortable", array("error" => _empty_email));
+        if(_rows($check_email)) $error = show("errors/errortable", array("error" => _error_email_exists));
+        if(empty($_POST['nick'])) $error = show("errors/errortable", array("error" => _empty_nick));
+        if(_rows($check_nick)) $error = show("errors/errortable", array("error" => _error_nick_exists));
+        if(empty($_POST['user'])) $error = show("errors/errortable", array("error" => _empty_user));
+        if(_rows($check_user)) $error = show("errors/errortable", array("error" => _error_user_exists));
+
+        if($check_regcode == 1)
+        {
+          $regcode = show($dir."/register_regcode", array("confirm" => _register_confirm,
+                                                          "confirm_add" => _register_confirm_add,));
+        } else {
+          $regcode = "";
+        }
+
+        $index = show($dir."/register", array("registerhead" => _register_head,
+                                              "error" => $error,
+                                              "name" => _loginname,
+                                              "nick" => _nick,
+                          "pwd" => _pwd,
+                                              "pwd2" => _pwd2,
+                                              "email" => _email,
+                                              "r_name" => $_POST['user'],
+                                              "r_nick" => $_POST['nick'],
+                                              "r_email" => $_POST['email'],
+"pflicht" => _contact_pflichtfeld,
+                                              "value" => _button_value_reg,
+                                              "regcode" => $regcode));
+    } else {
+
+        if(empty($_POST['pwd']))
+        {
+          $mkpwd = mkpwd();
+          $pwd = md5($mkpwd);
+          $msg = _info_reg_valid;
+        } else {
+          $mkpwd = $_POST['pwd'];
+          $pwd = md5($mkpwd);
+          $msg = _info_reg_valid_pwd;
+        }
+
+            $qry = db("INSERT INTO ".$db['users']."
                  SET `user`     = '".up($_POST['user'])."',
                      `nick`     = '".up($_POST['nick'])."',
                      `email`    = '".up($_POST['email'])."',
@@ -253,31 +286,32 @@ case 'register';
       $qry = db("INSERT INTO ".$db['permissions']."
                  SET `user` = '".((int)$insert_id)."'");
 
-			$qry = db("INSERT INTO ".$db['userstats']."
-								 SET `user`       = '".((int)$insert_id)."',
+            $qry = db("INSERT INTO ".$db['userstats']."
+                                 SET `user`       = '".((int)$insert_id)."',
                      `lastvisit`	= '".((int)time())."'");
 
-		wire_ipcheck("reg(".$insert_id.")");
+      $protocol = "reg(".$insert_id.")";
+      $qry = db("INSERT INTO ".$db['ipcheck']."
+                 SET `ip`   = '".$userip."',
+                     `what` = '".$protocol."',
+                     `time` = '".((int)time())."'");
 
-  		$message = show(settings('eml_reg'), array("user" => up($_POST['user']),
-											       "pwd" => $mkpwd));
-		$subject = settings('eml_reg_subj');
+          $message = show(re(settings('eml_reg')), array("user" => up($_POST['user']),
+                                                   "pwd" => $mkpwd));
+        $subject = re(settings('eml_reg_subj'));
 
-	    sendMail($_POST['email'],$subject,$message);
+        sendMail($_POST['email'],$subject,$message);
 
-		$index = info(show($msg, array("email" => $_POST['email'])), "../user/?action=login");
-	 }
+        $index = info(show($msg, array("email" => $_POST['email'])), "../user/?action=login");
+     }
   }
 break;
 case 'userlobby';
   $where = _site_user_lobby;
   if($chkMe == "unlogged")
   {
-	  $index = error(_error_have_to_be_logged, 1);
+      $index = error(_error_have_to_be_logged, 1);
   } else {
-	$erase = ""; $nextkal = ""; $artikel = ""; $artc = ""; $rankings = ""; $awards = ""; $ftopics = ""; $forumposts = ""; $away_new = "";
-	$cwcom  = ""; $gal = ""; $newv = ""; $cws  = ""; $newsc = ""; $gb = ""; $user = ""; $membergb = "";  $msg = ""; $news = ""; $away_now = ""; 
-	
     $qry = db("SELECT lastvisit FROM ".$db['userstats']." WHERE user = ".$userid."");
     $get = _fetch($qry);
 
@@ -290,7 +324,10 @@ case 'userlobby';
                   ORDER BY s1.kid,s2.kattopic");
     while($getkat = _fetch($qrykat))
     {
-      $nthread = ""; $post = ""; $forumposts_show = "";
+      unset($nthread);
+      unset($post);
+      unset($forumposts_show);
+
       if(fintern($getkat['id']))
       {
         $qrytopic = db("SELECT lp,id,topic,first,sticky FROM ".$db['f_threads']."
@@ -298,7 +335,6 @@ case 'userlobby';
                         AND lp > ".$get['lastvisit']."
                         ORDER BY lp DESC
                         LIMIT 150");
-						
         while($gettopic = _fetch($qrytopic))
         {
           $lp = "";
@@ -335,7 +371,7 @@ case 'userlobby';
             $date = (date("d.m.")==date("d.m.",$gettopic['lp']))
                   ? '['.date("H:i",$gettopic['lp']).']'
                   : date("d.m.",$gettopic['lp']).' ['.date("H:i",$gettopic['lp']).']';
-            
+
             $erase = _user_new_erase;
             $forumposts_show .= '&nbsp;&nbsp;'.$date.
                                 show(_user_new_forum, array("cnt" => $cnt,
@@ -380,9 +416,10 @@ case 'userlobby';
       }
     }
 
-    $getu = db("SELECT id,regdatum FROM ".$db['users']."
-                ORDER BY id DESC",false,true);
-    
+    $qryu = db("SELECT id,regdatum FROM ".$db['users']."
+                ORDER BY id DESC");
+    $getu = _fetch($qryu);
+
     if(check_new($getu['regdatum'],1))
     {
       $check = cnt($db['users'], " WHERE regdatum > ".$get['lastvisit']."");
@@ -400,17 +437,17 @@ case 'userlobby';
       $user = show(_user_new_users, array("cnt" => $cnt,
                                           "eintrag" => $eintrag));
     }
-    
-		if(!permission("gb") && $gb_activ == '1') $activ = "WHERE public = 1";
-		elseif(permission("gb") && $gb_activ == '1') $activ = "";
-		elseif(permission("gb") && $gb_activ == '0') $activ = "";
-		elseif($gb_activ == '0') $activ = "";
-		if(!permission("gb") && $gb_activ == '1') $cntgb = "AND public = 1";
-		elseif(permission("gb") && $gb_activ == '1') $cntgb = "";
-		elseif(permission("gb") && $gb_activ == '0') $cntgb = "";
-		elseif($gb_activ == '0') $cntgb = "";
+
+        if(!permission("gb") && $gb_activ == '1') $activ = "WHERE public = 1";
+        elseif(permission("gb") && $gb_activ == '1') $activ = "";
+        elseif(permission("gb") && $gb_activ == '0') $activ = "";
+        elseif($gb_activ == '0') $activ = "";
+        if(!permission("gb") && $gb_activ == '1') $cntgb = "AND public = 1";
+        elseif(permission("gb") && $gb_activ == '1') $cntgb = "";
+        elseif(permission("gb") && $gb_activ == '0') $cntgb = "";
+        elseif($gb_activ == '0') $cntgb = "";
     $qrygb = db("SELECT id,datum FROM ".$db['gb']."
-				 				 ".$activ."
+                                  ".$activ."
                  ORDER BY id DESC");
     $getgb = _fetch($qrygb);
     if(check_new($getgb['datum'],1))
@@ -430,9 +467,10 @@ case 'userlobby';
                                      "eintrag" => $eintrag));
     }
 
-    $getmember = db("SELECT id,datum FROM ".$db['usergb']."
+    $qrymember = db("SELECT id,datum FROM ".$db['usergb']."
                      WHERE user = '".$userid."'
-                     ORDER BY datum DESC",false,true);
+                     ORDER BY datum DESC");
+    $getmember = _fetch($qrymember);
 
     if(check_new($getmember['datum'],1))
     {
@@ -452,11 +490,12 @@ case 'userlobby';
                                                  "eintrag" => $eintrag));
     }
 // Nachrichten
-    $getmsg = db("SELECT id,an,datum FROM ".$db['msg']."
+    $qrymsg = db("SELECT id,an,datum FROM ".$db['msg']."
                   WHERE an = '".$userid."'
                   AND readed = 0
                   AND see_u = 0
-                  ORDER BY datum DESC",false,true);
+                  ORDER BY datum DESC");
+    $getmsg = _fetch($qrymsg);
 
     $check = cnt($db['msg'], " WHERE an = '".$userid."' AND readed = 0 AND see_u = 0");
 
@@ -472,14 +511,14 @@ case 'userlobby';
     if($chkMe >= 2)
     {
       $qrynews = db("SELECT id,datum FROM ".$db['news']."
-										 WHERE public = 1
-										 AND datum <= ".time()."
+                                         WHERE public = 1
+                                         AND datum <= ".time()."
                      ORDER BY id DESC");
     } else {
       $qrynews = db("SELECT id,datum FROM ".$db['news']."
-										 WHERE public = 1
+                                         WHERE public = 1
                      AND intern = 0
-										 AND datum <= ".time()."
+                                         AND datum <= ".time()."
                      ORDER BY id DESC");
     }
     while($getnews  = _fetch($qrynews))
@@ -557,12 +596,12 @@ case 'userlobby';
     if(permission("votes"))
     {
       $qrynewv = db("SELECT datum FROM ".$db['votes']."
-	  				 WHERE forum = 0
+                       WHERE forum = 0
                      ORDER BY datum DESC");
     } else {
       $qrynewv = db("SELECT datum FROM ".$db['votes']."
                      WHERE intern = 0
-					 AND forum = 0
+                     AND forum = 0
                      ORDER BY datum DESC");
     }
     $getnewv = _fetch($qrynewv);
@@ -585,7 +624,11 @@ case 'userlobby';
                                           "eintrag" => $eintrag));
     }
 
-    $getkal = db("SELECT * FROM ".$db['events']." WHERE datum > '".time()."' ORDER BY datum",false,true);
+    $qrykal = db("SELECT * FROM ".$db['events']."
+                  WHERE datum > '".time()."'
+                  ORDER BY datum");
+    $getkal = _fetch($qrykal);
+
     if(check_new($getkal['datum'],1))
     {
       if(date("d.m.Y",$getkal['datum']) == date("d.m.Y", time()))
@@ -642,7 +685,7 @@ case 'userlobby';
 
     $qryart = db("SELECT id,datum FROM ".$db['artikel']."
                   WHERE public = 1
-									ORDER BY id DESC");
+                                    ORDER BY id DESC");
     while($getart  = _fetch($qryart))
     {
       if(check_new($getart['datum'],1))
@@ -712,9 +755,9 @@ case 'userlobby';
                                            "eintrag" => $eintrag));
     }
 
-// New Aways	
+// New Aways
     $chklevel = db("SELECT level FROM ".$db['users']." WHERE id = '".$userid."'");
-	$getchklevel = _fetch($chklevel);
+    $getchklevel = _fetch($chklevel);
 
     $qryawayn = db("SELECT * FROM ".$db['away']."
                     ORDER BY id");
@@ -723,42 +766,42 @@ case 'userlobby';
       if(check_new($getawayn['date'],1) && $getchklevel['level'] >= 2)
       {
         $erase = _user_new_erase;
-  	    $awayn .= show(_user_away_new, array("id" => $getawayn['id'],
-                      											 "user" => autor($getawayn['userid']),
-  	   								                       "ab" => date("d.m.y",$getawayn['start']),
-  									                         "wieder" => date("d.m.y",$getawayn['end']),
-  											                     "what" => $getawayn['titel']));
-											
+          $awayn .= show(_user_away_new, array("id" => $getawayn['id'],
+                                                                   "user" => autor($getawayn['userid']),
+                                                                "ab" => date("d.m.y",$getawayn['start']),
+                                                               "wieder" => date("d.m.y",$getawayn['end']),
+                                                                   "what" => $getawayn['titel']));
+
         $away_new = show(_user_away, array("naway" => _lobby_away_new,
-                    										   "away" => $awayn));
-  	  } else {
-  	    $away_new = ""; 
-  	  }
+                                                               "away" => $awayn));
+        } else {
+          $away_new = "";
+        }
     }
 // Aways
     $qryawaya = db("SELECT * FROM ".$db['away']."
                     WHERE start <= '".time()."'
-				    AND end >= '".time()."'
+                    AND end >= '".time()."'
                     ORDER BY start");
     while($getawaya = _fetch($qryawaya))
     {
       if(_rows($qryawaya) && $getchklevel['level'] >= 2)
       {
-	    
+
         if($getawaya['end'] > time()) $wieder = _away_to2.' <b>'.date("d.m.y",$getawaya['end']).'</b>';
         if(date("d.m.Y",$getawaya['end']) == date("d.m.Y",time())) $wieder = _away_today;
 
-		$awaya .= show(_user_away_now, array("id" => $getawaya['id'],
-											 "user" => autor($getawaya['userid']),
-	   								         "wieder" => $wieder,
-											 "what" => $getawaya['titel']));
+        $awaya .= show(_user_away_now, array("id" => $getawaya['id'],
+                                             "user" => autor($getawaya['userid']),
+                                                "wieder" => $wieder,
+                                             "what" => $getawaya['titel']));
 
         $away_now = show(_user_away_currently, array("ncaway" => _lobby_away,
-													 "caway" => $awaya));
-	  } else { 
-	    $away_now = ""; 
-	  }
-	}
+                                                     "caway" => $awaya));
+      } else {
+        $away_now = "";
+      }
+    }
 
 
     $qryft = db("SELECT s1.t_text,s1.id,s1.topic,s1.kid,s2.kattopic,s3.intern,s1.sticky
@@ -813,6 +856,7 @@ case 'userlobby';
     elseif($lvl == 4) $mylevel = _status_admin;
 
     $index = show($dir."/userlobby", array("userlobbyhead" => _userlobby,
+                                           "userstats" => _lobby_stats,
                                            "erase" => $erase,
                                            "pic" => useravatar($userid),
                                            "mynick" => autor($userid),
@@ -864,14 +908,18 @@ case 'userlobby';
                                            "msg" => $msg,
                                            "nnews" => _lobby_news,
                                            "news" => $news,
-										   "away_new" => $away_new,
-										   "away_now" => $away_now,
-				  						   "neuerungen" => _lobby_new));
+                                           "away_new" => $away_new,
+                                           "away_now" => $away_now,
+                                             "neuerungen" => _lobby_new));
   }
 break;
 case 'erase';
   $_SESSION['lastvisit'] = data($userid, "time");
-  db("UPDATE ".$db['userstats']." SET `lastvisit` = '".((int)$_SESSION['lastvisit'])."' WHERE user = '".$userid."'");
+
+  $update = db("UPDATE ".$db['userstats']."
+                SET `lastvisit` = '".((int)$_SESSION['lastvisit'])."'
+                WHERE user = '".$userid."'");
+
   header("Location: ?action=userlobby");
 break;
 case 'user';
@@ -884,42 +932,48 @@ case 'user';
                   SET `profilhits` = profilhits+1
                   WHERE user = '".intval($_GET['id'])."'");
 
-  	$qry = db("SELECT * FROM ".$db['users']."
-	  					 WHERE id = '".intval($_GET['id'])."'");
-	  $get = _fetch($qry);
+      $qry = db("SELECT * FROM ".$db['users']."
+                           WHERE id = '".intval($_GET['id'])."'");
+      $get = _fetch($qry);
 
-	  if($get['sex'] == "1") $sex = _male;
-	  elseif($get['sex'] == "2") $sex = _female;
+      if($get['sex'] == "1") $sex = _male;
+      elseif($get['sex'] == "2") $sex = _female;
     else $sex = '-';
 
     if(empty($get['hp'])) $hp = "-";
     else $hp = "<a href=\"".$get['hp']."\" target=\"_blank\">".$get['hp']."</a>";;
 
-	  if(empty($get['email'])) $email = "-";
+      if(empty($get['email'])) $email = "-";
     else $email = "<img src=\"../inc/images/mailto.gif\" alt=\"\" align=\"texttop\"> <a href=\"mailto:".eMailAddr($get['email'])."\" target=\"_blank\">".eMailAddr($get['email'])."</a>";
 
-	  $pn = show(_pn_write, array("id" => $_GET['id'], "nick" => $get['nick']));
-		
-	  if($get['bday'] == ".." || $get['bday'] == 0 || empty($get['bday'])) $bday = "-";
-	  else $bday = $get['bday'];
+      $pn = show(_pn_write, array("id" => $_GET['id'],
+                                                              "nick" => $get['nick']));
 
-	  if(empty($get['icq']))
+      if(empty($get['hlswid'])) $hlsw = "-";
+        else $hlsw = show(_hlswicon, array("id" => re($get['hlswid']),
+                                                                            "img" => "1",
+                                                                           "css" => ""));
+
+      if($get['bday'] == ".." || $get['bday'] == 0 || empty($get['bday'])) $bday = "-";
+      else $bday = $get['bday'];
+
+      if(empty($get['icq']))
     {
       $icq = "-";
-	  } else {
+      } else {
       $icq = show(_icqstatus, array("uin" => $get['icq']));
       $icqnr = re($get['icq']);
     }
 
-  	if($get['status'] == 1 || ($getl['level'] != 1 && isset($_GET['sq']))) $status = _aktiv_icon;
-		else $status = _inaktiv_icon;
+      if($get['status'] == 1 || ($getl['level'] != 1 && isset($_GET['sq']))) $status = _aktiv_icon;
+        else $status = _inaktiv_icon;
 
-	  $qryl = db("SELECT * FROM ".$db['users']."
-		  					WHERE id = '".intval($_GET['id'])."'");
-	  $getl = _fetch($qryl);
+      $qryl = db("SELECT * FROM ".$db['users']."
+                              WHERE id = '".intval($_GET['id'])."'");
+      $getl = _fetch($qryl);
 
     if($getl['level'] != 1 || isset($_GET['sq']))
-		{
+        {
       $sq = db("SELECT * FROM ".$db['userpos']."
                 WHERE user = '".intval($_GET['id'])."'");
 
@@ -939,41 +993,41 @@ case 'user';
       } elseif(isset($_GET['sq'])) $pos = getrank($get['id'],$_GET['sq'],1);
         else                       $pos = getrank($get['id']);
 
-		  $qrycustom = db("SELECT * FROM ".$db['profile']."
-	  	 			           WHERE kid = '2'
+          $qrycustom = db("SELECT * FROM ".$db['profile']."
+                                  WHERE kid = '2'
                        AND shown = '1'
                        ORDER BY id ASC");
-	    while($getcustom = _fetch($qrycustom))
+        while($getcustom = _fetch($qrycustom))
       {
-		    $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
-	  		       		        WHERE id = '".intval($_GET['id'])."'
-						              LIMIT 1");
-		    $getcontent = _fetch($qrycontent);
-		    if(!empty($getcontent[$getcustom['feldname']]))
-		    {
-		      if($getcustom['type'] == 2)
+            $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
+                                     WHERE id = '".intval($_GET['id'])."'
+                                      LIMIT 1");
+            $getcontent = _fetch($qrycontent);
+            if(!empty($getcontent[$getcustom['feldname']]))
+            {
+              if($getcustom['type'] == 2)
             $custom_clan .= show(_profil_custom_url, array("name" => re(pfields_name($getcustom['name'])),
-		  			                          								 		 "value" => re($getcontent[$getcustom['feldname']])));
-			    elseif($getcustom['type'] == 3)
+                                                                                          "value" => re($getcontent[$getcustom['feldname']])));
+                elseif($getcustom['type'] == 3)
             $custom_clan .= show(_profil_custom_mail, array("name" => re(pfields_name($getcustom['name'])),
-		  			                            							 		  "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
-		      else
+                                                                                         "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
+              else
             $custom_clan .= show(_profil_custom, array("name" => re(pfields_name($getcustom['name'])),
-		  		                      									 		 "value" => re($getcontent[$getcustom['feldname']])));
-		    }
-		  }
+                                                                                      "value" => re($getcontent[$getcustom['feldname']])));
+            }
+          }
 
-			$clan = show($dir."/clan", array("clan" => _profil_clan,
-		  															   "pposition" => _profil_position,
-			  														   "pstatus" => _profil_status,
-					   												   "position" => $pos,
-							  										   "status" => $status,
-								  									   "custom_clan" => $custom_clan));
-		} else {
+            $clan = show($dir."/clan", array("clan" => _profil_clan,
+                                                                         "pposition" => _profil_position,
+                                                                         "pstatus" => _profil_status,
+                                                                          "position" => $pos,
+                                                                         "status" => $status,
+                                                                         "custom_clan" => $custom_clan));
+        } else {
       $clan = "";
-		}
+        }
 
-		$buddyadd = show(_addbuddyicon, array("id" => $_GET['id']));
+        $buddyadd = show(_addbuddyicon, array("id" => $_GET['id']));
 
     if(permission("editusers"))
     {
@@ -990,8 +1044,8 @@ case 'user';
     $qrygl = db("SELECT * FROM ".$db['usergallery']."
                  WHERE user = '".intval($_GET['id'])."'
                  ORDER BY id DESC");
-	  while($getgl = _fetch($qrygl))
-	  {
+      while($getgl = _fetch($qrygl))
+      {
       $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
       $gal .= show($dir."/profil_gallery_show", array("picture" => img_size("inc/images/uploads/usergallery"."/".$_GET['id']."_".$getgl['pic']),
                                                       "beschreibung" => bbcode($getgl['beschreibung']),
@@ -1002,21 +1056,21 @@ case 'user';
                                                  "beschr" => _gallery_beschr,
                                                  "showgallery" => $gal));
   } elseif($_GET['show'] == "gb") {
-	  $addgb = show(_usergb_eintragen, array("id" => $_GET['id']));
+      $addgb = show(_usergb_eintragen, array("id" => $_GET['id']));
 
     if(isset($_GET['page'])) $page = $_GET['page'];
     else $page = 1;
 
-	  $qrygb = db("SELECT * FROM ".$db['usergb']."
-		  					 WHERE user = ".intval($_GET['id'])."
-			  				 ORDER BY datum DESC
+      $qrygb = db("SELECT * FROM ".$db['usergb']."
+                               WHERE user = ".intval($_GET['id'])."
+                               ORDER BY datum DESC
                  LIMIT ".($page - 1)*$maxusergb.",".$maxusergb."");
 
     $entrys = cnt($db['usergb'], " WHERE user = ".intval($_GET['id']));
     $i = $entrys-($page - 1)*$maxusergb;
 
-	  while($getgb = _fetch($qrygb))
-	  {
+      while($getgb = _fetch($qrygb))
+      {
       if($getgb['hp']) $gbhp = show(_hpicon, array("hp" => $getgb['hp']));
       else $gbhp = "";
 
@@ -1038,12 +1092,12 @@ case 'user';
         $edit = "";
         $delete = "";
       }
-      
+
       if($chkMe == 4) $posted_ip = $get['ip'];
       else $posted_ip = _logged;
 
-		  if($getgb['reg'] == 0)
-		  {
+          if($getgb['reg'] == 0)
+          {
         if($getgb['hp']) $hp = show(_hpicon_forum, array("hp" => $getgb['hp']));
         else $hp = "";
         if($getgb['email']) $email = '<br />'.show(_emailicon_forum, array("email" => eMailAddr($getgb['email'])));
@@ -1052,25 +1106,25 @@ case 'user';
         $avatar = "";
         $nick = show(_link_mailto, array("nick" => re($getgb['nick']),
                                          "email" => eMailAddr($getgb['email'])));
-		  } else {
+          } else {
         $www = data($getgb['reg'], "hp");
         $hp = empty($www) ? '' : show(_hpicon_forum, array("hp" => $www));
         $email = '<br />'.show(_emailicon_forum, array("email" => eMailAddr(data($getgb['reg'], "email"))));
         $onoff = onlinecheck($getgb['reg']);
         $nick = autor($getgb['reg']);
-		  }
+          }
 
       $titel = show(_eintrag_titel, array("postid" => $i,
-												 				     			"datum" => date("d.m.Y", $getgb['datum']),
-													 		 			    	"zeit" => date("H:i", $getgb['datum'])._uhr,
+                                                                                  "datum" => date("d.m.Y", $getgb['datum']),
+                                                                                  "zeit" => date("H:i", $getgb['datum'])._uhr,
                                           "edit" => $edit,
                                           "delete" => $delete));
 
       if($chkMe == 4) $posted_ip = $getgb['ip'];
       else            $posted_ip = _logged;
 
-		  $membergb .= show("page/comments_show", array("titel" => $titel,
-			  		  	    													      "comment" => bbcode($getgb['nachricht']),
+          $membergb .= show("page/comments_show", array("titel" => $titel,
+                                                                                          "comment" => bbcode($getgb['nachricht']),
                                                     "nick" => $nick,
                                                     "hp" => $hp,
                                                     "editby" => bbcode($getgb['editby']),
@@ -1079,26 +1133,26 @@ case 'user';
                                                     "onoff" => $onoff,
                                                     "rank" => getrank($getgb['reg']),
                                                     "ip" => $posted_ip));
-		  $i--;
-	  }
+          $i--;
+      }
 
     if(!ipcheck("mgbid(".$_GET['id'].")", $flood_membergb))
     {
       if(isset($userid))
-	    {
-		    $form = show("page/editor_regged", array("nick" => autor($userid),
+        {
+            $form = show("page/editor_regged", array("nick" => autor($userid),
                                                  "von" => _autor));
-	    } else {
+        } else {
         $form = show("page/editor_notregged", array("nickhead" => _nick,
                                                     "emailhead" => _email,
                                                     "hphead" => _hp,
                                                     "postemail" => ""));
       }
-	    $add = show($dir."/usergb_add", array("titel" => _eintragen_titel,
-			    																	"nickhead" => _nick,
-					    															"bbcodehead" => _bbcode,
-							    													"emailhead" => _email,
-									    											"hphead" => _hp,
+        $add = show($dir."/usergb_add", array("titel" => _eintragen_titel,
+                                                                                    "nickhead" => _nick,
+                                                                                    "bbcodehead" => _bbcode,
+                                                                                    "emailhead" => _email,
+                                                                                    "hphead" => _hp,
                                             "form" => $form,
                                             "security" => _register_confirm,
                                             "preview" => _preview,
@@ -1107,17 +1161,17 @@ case 'user';
                                             "reg" => "",
                                             "b1" => $u_b1,
                                             "b2" => $u_b2,
-											    									"id" => $_GET['id'],
-													    							"postemail" => $postemail,
-		 		 											  			 	    "add_head" => _gb_add_head,
+                                                                                    "id" => $_GET['id'],
+                                                                                    "postemail" => $postemail,
+                                                                                     "add_head" => _gb_add_head,
                                             "what" => _button_value_add,
                                             "lang" => $language,
                                             "ip" => _iplog_info,
-																  					"posthp" => $posthp,
-																	  				"postnick" => $postnick,
-																		  			"posteintrag" => "",
-																			  		"error" => "",
-																					  "eintraghead" => _eintrag));
+                                                                                      "posthp" => $posthp,
+                                                                                      "postnick" => $postnick,
+                                                                                      "posteintrag" => "",
+                                                                                      "error" => "",
+                                                                                      "eintraghead" => _eintrag));
     } else {
       $add = "";
     }
@@ -1125,119 +1179,120 @@ case 'user';
     $seiten = nav($entrys,$maxusergb,"?action=user&amp;id=".$_GET['id']."&show=gb");
 
     $show = show($dir."/profil_gb",array("gbhead" => _membergb,
-	 				  													   "show" => $membergb,
+                                                                              "show" => $membergb,
                                          "seiten" => $seiten,
                                          "entry" => $add));
     } else {
       $qrycustom = db("SELECT * FROM ".$db['profile']."
-	   	  		           WHERE kid = '1' AND shown = '1'
+                                WHERE kid = '1' AND shown = '1'
                        ORDER BY id ASC");
-	    while($getcustom = _fetch($qrycustom))
-	    {
-		    $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
-	            		        WHERE id = '".intval($_GET['id'])."'
-					                LIMIT 1");
-		    $getcontent = _fetch($qrycontent);
-		    if(!empty($getcontent[$getcustom['feldname']]))
-		    {
-		      if($getcustom['type'] == 2)
+        while($getcustom = _fetch($qrycustom))
+        {
+            $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
+                                WHERE id = '".intval($_GET['id'])."'
+                                    LIMIT 1");
+            $getcontent = _fetch($qrycontent);
+            if(!empty($getcontent[$getcustom['feldname']]))
+            {
+              if($getcustom['type'] == 2)
             $custom_about .= show(_profil_custom_url, array("name" => re(pfields_name($getcustom['name'])),
-		 	                                									 		"value" => re($getcontent[$getcustom['feldname']])));
-			    elseif($getcustom['type'] == 3)
+                                                                                          "value" => re($getcontent[$getcustom['feldname']])));
+                elseif($getcustom['type'] == 3)
             $custom_about .= show(_profil_custom_mail, array("name" => re(pfields_name($getcustom['name'])),
-		                                  									 		 "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
-		      else
+                                                                                        "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
+              else
             $custom_about .= show(_profil_custom, array("name" => re(pfields_name($getcustom['name'])),
-		  	                            								 		"value" => re($getcontent[$getcustom['feldname']])));
-		    }
-		  }
+                                                                                   "value" => re($getcontent[$getcustom['feldname']])));
+            }
+          }
 
-		  $qrycustom = db("SELECT * FROM ".$db['profile']."
-	            			   WHERE kid = '3' AND shown = '1'
+          $qrycustom = db("SELECT * FROM ".$db['profile']."
+                               WHERE kid = '3' AND shown = '1'
                        ORDER BY id ASC");
-	    while($getcustom = _fetch($qrycustom))
-	    {
-		    $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
-	              		      WHERE id = '".intval($_GET['id'])."'
-					                LIMIT 1");
-		    $getcontent = _fetch($qrycontent);
-		    if(!empty($getcontent[$getcustom['feldname']]))
-		    {
-		      if($getcustom['type'] == 2)
+        while($getcustom = _fetch($qrycustom))
+        {
+            $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
+                                WHERE id = '".intval($_GET['id'])."'
+                                    LIMIT 1");
+            $getcontent = _fetch($qrycontent);
+            if(!empty($getcontent[$getcustom['feldname']]))
+            {
+              if($getcustom['type'] == 2)
             $custom_contact .= show(_profil_custom_url, array("name" => re(pfields_name($getcustom['name'])),
-		    	                                   						 		  "value" => re($getcontent[$getcustom['feldname']])));
-			    elseif($getcustom['type'] == 3)
+                                                                                      "value" => re($getcontent[$getcustom['feldname']])));
+                elseif($getcustom['type'] == 3)
             $custom_contact .= show(_profil_custom_mail, array("name" => re(pfields_name($getcustom['name'])),
-	  				  							 		                               "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
-	        else
+                                                                                            "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
+            else
             $custom_contact .= show(_profil_custom, array("name" => re(pfields_name($getcustom['name'])),
-	  				  							 		                          "value" => re($getcontent[$getcustom['feldname']])));
-	      }
-	    }
+                                                                                       "value" => re($getcontent[$getcustom['feldname']])));
+          }
+        }
 
-	    $qrycustom = db("SELECT * FROM ".$db['profile']."
-  	           			   WHERE kid = '4' AND shown = '1'
+        $qrycustom = db("SELECT * FROM ".$db['profile']."
+                                WHERE kid = '4' AND shown = '1'
                        ORDER BY id ASC");
       $cf = 0;
       while($getcustom = _fetch($qrycustom))
       {
         $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
-		          		        WHERE id = '".intval($_GET['id'])."'
-				                  LIMIT 1");
-	      $getcontent = _fetch($qrycontent);
-	      if(!empty($getcontent[$getcustom['feldname']]))
-	      {
-	        if($getcustom['type']==2)
+                                  WHERE id = '".intval($_GET['id'])."'
+                                  LIMIT 1");
+          $getcontent = _fetch($qrycontent);
+          if(!empty($getcontent[$getcustom['feldname']]))
+          {
+            if($getcustom['type']==2)
             $custom_favos .= show(_profil_custom_url, array("name" => re(pfields_name($getcustom['name'])),
-	 				    							 		                            "value" => re($getcontent[$getcustom['feldname']])));
-		      elseif($getcustom['type']==3)
+                                                                                          "value" => re($getcontent[$getcustom['feldname']])));
+              elseif($getcustom['type']==3)
             $custom_favos .= show(_profil_custom_mail, array("name" => re(pfields_name($getcustom['name'])),
-	  			    							 		                             "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
-	        else
+                                                                                        "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
+            else
             $custom_favos .= show(_profil_custom, array("name" => re(pfields_name($getcustom['name'])),
-	  			    							 		                        "value" => re($getcontent[$getcustom['feldname']])));
+                                                                                   "value" => re($getcontent[$getcustom['feldname']])));
           $cf++;
-	      }
-	    }
+          }
+        }
       if($cf != 0) $favos_head = show(_profil_head_cont, array("what" => _profil_favos));
 
-	  	$qrycustom = db("SELECT * FROM ".$db['profile']."
-	    	       			   WHERE kid = '5' AND shown = '1'
+          $qrycustom = db("SELECT * FROM ".$db['profile']."
+                                  WHERE kid = '5' AND shown = '1'
                        ORDER BY id ASC");
       $ch = 0;
-	    while($getcustom = _fetch($qrycustom))
-	    {
+        while($getcustom = _fetch($qrycustom))
+        {
         $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
- 		           		        WHERE id = '".intval($_GET['id'])."'
-			  	                LIMIT 1");
-	      $getcontent = _fetch($qrycontent);
+                                    WHERE id = '".intval($_GET['id'])."'
+                                  LIMIT 1");
+          $getcontent = _fetch($qrycontent);
 
         if(!empty($getcontent[$getcustom['feldname']]))
         {
-	        if($getcustom['type']==2)
+            if($getcustom['type']==2)
             $custom_hardware .= show(_profil_custom_url, array("name" => re(pfields_name($getcustom['name'])),
-			                                  									 		 "value" => re($getcontent[$getcustom['feldname']])));
-		      elseif($getcustom['type']==3)
+                                                                                            "value" => re($getcontent[$getcustom['feldname']])));
+              elseif($getcustom['type']==3)
             $custom_hardware .= show(_profil_custom_mail, array("name" => re(pfields_name($getcustom['name'])),
-		 		                                    							 		  "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
-		      else
+                                                                                            "value" => eMailAddr(re($getcontent[$getcustom['feldname']]))));
+              else
             $custom_hardware .= show(_profil_custom, array("name" => re(pfields_name($getcustom['name'])),
-		 			                            								 		 "value" => re($getcontent[$getcustom['feldname']])));
+                                                                                           "value" => re($getcontent[$getcustom['feldname']])));
           $ch++;
-		    }
-		  }
+            }
+          }
       if($ch != 0) $hardware_head = show(_profil_head_cont, array("what" => _profil_hardware));
 
       if(empty($get['rlname'])) $rlname = '-';
       else $rlname = re($get['rlname']);
 
+      $city = re($get['city']); $beschreibung = bbcode($get['beschreibung']);
       $show = show($dir."/profil_show",array("hardware_head" => $hardware_head,
                                              "about" => _profil_about,
                                              "rang" => $rang,
                                              "country" => flag($get['country']),
                                              "rangpic" => $rangpic,
                                              "pcity" => _profil_city,
-                                             "city" => re($get['city']),
+                                             "city" => (empty($city) ? '-' : $city),
                                              "prank" => _profile_rank,
                                              "stats_hits" => _profil_pagehits,
                                              "stats_profilhits" => _profil_profilhits,
@@ -1256,53 +1311,56 @@ case 'user';
                                              "cws" => userstats($_GET['id'], "cws"),
                                              "regdatum" => date("d.m.Y H:i", $get['regdatum'])._uhr,
                                              "lastvisit" => date("d.m.Y H:i", userstats($_GET['id'], "lastvisit"))._uhr,
-		     						  	     "contact" => _profil_contact,
-			      							 "preal" => _profil_real,
+                                                                "contact" => _profil_contact,
+                                                                 "preal" => _profil_real,
                                              "pemail" => _email,
                                              "picq" => _icq,
-                                             "pxfire" => _xfire,
+                                             "phlsw" => _hlswstatus,
+                                             "psteam" => _steamid,
                                              "php" => _hp,
                                              "hp" => $hp,
-										     "pnick" => _nick,
-										     "pbday" => _profil_bday,
-										     "page" => _profil_age,
-										     "psex" => _profil_sex,
-										     "gamestuff" => _profil_gamestuff,
-                                             "xfire_name" => re($get['xfire']),
-  										     "buddyadd" => $buddyadd,
-	  									     "userstats" => _profil_userstats,
-		    				  				 "pos" => _profil_os,
-			    				  			 "pcpu" => _profil_cpu,
-				    				  		 "pram" => _profil_ram,
-  					    				  	 "phdd" => _profil_hdd,
-	  					    				 "pboard" => _profil_board,
-		  					    			 "pmaus" => _profil_maus,
-			  					  		     "nick" => autor($get['id']),
-				  					  	     "rlname" => $rlname,
-    			  					  	     "bday" => $bday,
-		    		  					     "age" => getAge($get['bday']),
-			    		  				     "sex" => $sex,
-							      		     "email" => $email,
-								      	     "icq" => $icq,
-									         "icqnr" => $icqnr,
-										     "pn" => $pn,
+                                                                 "pnick" => _nick,
+                                                                 "pbday" => _profil_bday,
+                                                                 "page" => _profil_age,
+                                                                 "psex" => _profil_sex,
+                                                                 "gamestuff" => _profil_gamestuff,
+                                             "xfire" => re($get['hlswid']),
+                                                                 "buddyadd" => $buddyadd,
+                                                                 "userstats" => _profil_userstats,
+                                                                 "pos" => _profil_os,
+                                                                 "pcpu" => _profil_cpu,
+                                                                 "pram" => _profil_ram,
+                                                                 "phdd" => _profil_hdd,
+                                                                 "pboard" => _profil_board,
+                                                                 "pmaus" => _profil_maus,
+                                                                 "nick" => autor($get['id']),
+                                                                 "rlname" => $rlname,
+                                                               "bday" => $bday,
+                                                               "age" => getAge($get['bday']),
+                                                               "sex" => $sex,
+                                                               "email" => $email,
+                                                               "icq" => $icq,
+                                                               "icqnr" => $icqnr,
+                                                                 "pn" => $pn,
                                              "edituser" => $edituser,
-										     "xfire" => xfire(re($get['xfire'])),
-						  	  			     "onoff" => onlinecheck($get['id']),
-  							  	  		     "clan" => $clan,
-	  							  	  	     "picture" => userpic($get['id']),
+                                                                 "hlswid" => $hlsw,
+                                                                 "steamid" => $steamid,
+                                                                 "steam" => $steam,
+                                                                 "onoff" => onlinecheck($get['id']),
+                                                                 "clan" => $clan,
+                                                                 "picture" => userpic($get['id']),
                                              "favos_head" => $favos_head,
-			  							     "sonst" =>	_profil_sonst,
-				  						     "pich" => _profil_ich,
-  					  					     "pposition" => _profil_position,
-	  					  				     "pstatus" => _profil_status,
-		  					  			     "position" => getrank($get['id']),
-			  					  		     "status" => $status,
-				  					  	     "ich" => bbcode($get['beschreibung']),
-					  					     "custom_about" => $custom_about,
-						  				     "custom_contact" => $custom_contact,
-							  			     "custom_favos" => $custom_favos,
-								  		     "custom_hardware" => $custom_hardware));
+                                                                 "sonst" =>	_profil_sonst,
+                                                                 "pich" => _profil_ich,
+                                                                 "pposition" => _profil_position,
+                                                                 "pstatus" => _profil_status,
+                                                                 "position" => getrank($get['id']),
+                                                                 "status" => $status,
+                                                                 "ich" => (empty($beschreibung) ? '-' : $beschreibung),
+                                                                 "custom_about" => $custom_about,
+                                                                 "custom_contact" => $custom_contact,
+                                                                 "custom_favos" => $custom_favos,
+                                                                 "custom_hardware" => $custom_hardware));
     }
 
     $navi_profil = show(_profil_navi_profil, array("id" => $_GET['id']));
@@ -1311,8 +1369,8 @@ case 'user';
 
     $profil_head = show(_profil_head, array("profilhits" => userstats($_GET['id'],"profilhits")));
 
-	  $index = show($dir."/profil", array("profilhead" => $profil_head,
-						  				"show" => $show,
+      $index = show($dir."/profil", array("profilhead" => $profil_head,
+                                                                              "show" => $show,
                                         "nick" => autor($_GET['id']),
                                         "profil" => $navi_profil,
                                         "gb" => $navi_gb,
@@ -1338,22 +1396,22 @@ case 'user';
     if($get['reg'] == $userid || permission('editusers'))
     {
       if($get['reg'] != 0)
-  	  {
-  		  $form = show("page/editor_regged", array("nick" => autor($get['reg']),
+        {
+            $form = show("page/editor_regged", array("nick" => autor($get['reg']),
                                                  "von" => _autor));
-  	  } else {
+        } else {
         $form = show("page/editor_notregged", array("nickhead" => _nick,
                                                     "emailhead" => _email,
                                                     "hphead" => _hp,
                                                     "postemail" => re($get['email']),
-              							    		"posthp" => re($get['hp']),
-              								    	"postnick" => re($get['nick'])));
+                                                                                    "posthp" => re($get['hp']),
+                                                                                    "postnick" => re($get['nick'])));
       }
 
-		  $index = show($dir."/usergb_add", array("nickhead" => _nick,
+          $index = show($dir."/usergb_add", array("nickhead" => _nick,
                                               "add_head" => _gb_edit_head,
-				  																		"bbcodehead" => _bbcode,
-					  																	"emailhead" => _email,
+                                                                                          "bbcodehead" => _bbcode,
+                                                                                          "emailhead" => _email,
                                               "preview" => _preview,
                                               "whaturl" => "edit&gbid=".$_GET['gbid'],
                                               "ed" => "&amp;do=edit&amp;uid=".$_GET['id']."&amp;gbid=".$_GET['gbid'],
@@ -1362,16 +1420,16 @@ case 'user';
                                               "b2" => $u_b2,
                                               "what" => _button_value_edit,
                                               "reg" => $get['reg'],
-						  																"hphead" => _hp,
-							  															"id" => $_GET['id'],
+                                                                                          "hphead" => _hp,
+                                                                                          "id" => $_GET['id'],
                                               "form" => $form,
-								  														"postemail" => $get['email'],
-									  													"posthp" => $get['hp'],
-										  												"postnick" => re($get['nick']),
-											  											"posteintrag" => re_bbcode($get['nachricht']),
-												  										"error" => $error,
+                                                                                          "postemail" => $get['email'],
+                                                                                          "posthp" => $get['hp'],
+                                                                                          "postnick" => re($get['nick']),
+                                                                                          "posteintrag" => re_bbcode($get['nachricht']),
+                                                                                          "error" => $error,
                                               "ip" => _iplog_info,
-																  						"eintraghead" => _eintrag));
+                                                                                          "eintraghead" => _eintrag));
       } else {
         $index = error(_error_edit_post,1);
       }
@@ -1380,101 +1438,107 @@ case 'user';
 break;
 case 'usergb';
   $where = _site_user_profil;
-	if(_rows(db("SELECT `id` FROM ".$db['users']." WHERE `id` = '".(int)$_GET['id']."'")) != 0)
-	{
-		if($_GET['do'] == "add")
-		{
-			
-			if(isset($userid)) $toCheck = empty($_POST['eintrag']);
-			else
-				$toCheck = empty($_POST['nick']) || empty($_POST['email']) || empty($_POST['eintrag']) || !check_email($_POST['email']) || $_POST['secure'] != $_SESSION['sec_'.$dir] || empty($_SESSION['sec_'.$dir]);
-	
-			if($toCheck)
-			{
-				if(isset($userid))
-				{
-					if(empty($_POST['eintrag'])) $error = _empty_eintrag;
-	
-					$form = show("page/editor_regged", array("nick" => autor($userid),
-																									 "von" => _autor));
-				} else {
-					if(($_POST['secure'] != $_SESSION['sec_'.$dir]) || empty($_SESSION['sec_'.$dir])) $error = _error_invalid_regcode;
-					elseif(empty($_POST['nick']))  $error = _empty_nick;
-					elseif(empty($_POST['email'])) $error = _empty_email;
-					elseif(!check_email($_POST['email'])) $error = _error_invalid_email;
-					elseif(empty($_POST['eintrag'])) $error = _empty_eintrag;
-	
-					$form = show("page/editor_notregged", array("nickhead" => _nick,
-																											"emailhead" => _email,
-																											"hphead" => _hp,));
-				}
-	
-				$error = show("errors/errortable", array("error" => $error));
-	
-				$index = show($dir."/usergb_add", array("titel" => _eintragen_titel,
-																								"nickhead" => _nick,
-																								"add_head" => _gb_add_head,
-																								"bbcodehead" => _bbcode,
-																								"emailhead" => _email,
-																								"preview" => _preview,
-																								"ed" => "&amp;uid=".$_GET['id'],
-																								"whaturl" => "add",
-																								"security" => _register_confirm,
-																								"b1" => $u_b1,
-																								"b2" => $u_b2,
-																								"what" => _button_value_add,
-																								"hphead" => _hp,
-																								"id" => $_GET['id'],
-																								"reg" => $_POST['reg'],
-																								"form" => $form,
-																								"postemail" => $_POST['email'],
-																								"posthp" => $_POST['hp'],
-																								"postnick" => re($_POST['nick']),
-																								"posteintrag" => re_bbcode($_POST['eintrag']),
-																								"error" => $error,
-																								"ip" => _iplog_info,
-																								"eintraghead" => _eintrag));
-			} else {
-				db("INSERT INTO ".$db['usergb']."
-									 SET `user`       = '".((int)$_GET['id'])."',
-											 `datum`      = '".((int)time())."',
-											 `nick`       = '".up($_POST['nick'])."',
-											 `email`      = '".up($_POST['email'])."',
-											 `hp`         = '".links($_POST['hp'])."',
-											 `reg`        = '".((int)$userid)."',
-											 `nachricht`  = '".up($_POST['eintrag'],1)."',
-											 `ip`         = '".visitorIp()."'");
-	
-                wire_ipcheck("mgbid(".$_GET['id'].")");
-				$index = info(_usergb_entry_successful, "?action=user&amp;id=".$_GET['id']."&show=gb");
-			}
-		} elseif($_GET['do'] == 'edit') {
-				if($_POST['reg'] == $userid || permission('editusers'))
-				{
-					if($_POST['reg'] == 0)
-					{
-						 $addme = "`nick`       = '".up($_POST['nick'])."',
-											 `email`      = '".up($_POST['email'])."',
-											 `hp`         = '".links($_POST['hp'])."',";
-					}
-	
-					$editedby = show(_edited_by, array("autor" => autor($userid), "time" => date("d.m.Y H:i", time())._uhr));
-	
-					$upd = db("UPDATE ".$db['usergb']."
-										 SET ".$addme."
-												 `nachricht`  = '".up($_POST['eintrag'],1)."',
-												 `reg`        = '".((int)$_POST['reg'])."',
-												 `editby`     = '".addslashes($editedby)."'
-										 WHERE id = '".intval($_GET['gbid'])."'");
-	
-					$index = info(_gb_edited, "?action=user&show=gb&id=".$_GET['id']);
-				} else {
-					$index = error(_error_edit_post,1);
-				}
-		}
-	} else{
-			$index = error(_user_dont_exist,1);
-	}
+    if(_rows(db("SELECT `id` FROM ".$db['users']." WHERE `id` = '".(int)$_GET['id']."'")) != 0)
+    {
+        if($_GET['do'] == "add")
+        {
+
+            if(isset($userid)) $toCheck = empty($_POST['eintrag']);
+            else
+                $toCheck = empty($_POST['nick']) || empty($_POST['email']) || empty($_POST['eintrag']) || !check_email($_POST['email']) || $_POST['secure'] != $_SESSION['sec_'.$dir] || empty($_SESSION['sec_'.$dir]);
+
+            if($toCheck)
+            {
+                if(isset($userid))
+                {
+                    if(empty($_POST['eintrag'])) $error = _empty_eintrag;
+
+                    $form = show("page/editor_regged", array("nick" => autor($userid),
+                                                                                                     "von" => _autor));
+                } else {
+                    if(($_POST['secure'] != $_SESSION['sec_'.$dir]) || empty($_SESSION['sec_'.$dir])) $error = _error_invalid_regcode;
+                    elseif(empty($_POST['nick']))  $error = _empty_nick;
+                    elseif(empty($_POST['email'])) $error = _empty_email;
+                    elseif(!check_email($_POST['email'])) $error = _error_invalid_email;
+                    elseif(empty($_POST['eintrag'])) $error = _empty_eintrag;
+
+                    $form = show("page/editor_notregged", array("nickhead" => _nick,
+                                                                                                            "emailhead" => _email,
+                                                                                                            "hphead" => _hp,));
+                }
+
+                $error = show("errors/errortable", array("error" => $error));
+
+                $index = show($dir."/usergb_add", array("titel" => _eintragen_titel,
+                                                                                                "nickhead" => _nick,
+                                                                                                "add_head" => _gb_add_head,
+                                                                                                "bbcodehead" => _bbcode,
+                                                                                                "emailhead" => _email,
+                                                                                                "preview" => _preview,
+                                                                                                "ed" => "&amp;uid=".$_GET['id'],
+                                                                                                "whaturl" => "add",
+                                                                                                "security" => _register_confirm,
+                                                                                                "b1" => $u_b1,
+                                                                                                "b2" => $u_b2,
+                                                                                                "what" => _button_value_add,
+                                                                                                "hphead" => _hp,
+                                                                                                "id" => $_GET['id'],
+                                                                                                "reg" => $_POST['reg'],
+                                                                                                "form" => $form,
+                                                                                                "postemail" => $_POST['email'],
+                                                                                                "posthp" => $_POST['hp'],
+                                                                                                "postnick" => re($_POST['nick']),
+                                                                                                "posteintrag" => re_bbcode($_POST['eintrag']),
+                                                                                                "error" => $error,
+                                                                                                "ip" => _iplog_info,
+                                                                                                "eintraghead" => _eintrag));
+            } else {
+                $qry = db("INSERT INTO ".$db['usergb']."
+                                     SET `user`       = '".((int)$_GET['id'])."',
+                                             `datum`      = '".((int)time())."',
+                                             `nick`       = '".up($_POST['nick'])."',
+                                             `email`      = '".up($_POST['email'])."',
+                                             `hp`         = '".links($_POST['hp'])."',
+                                             `reg`        = '".((int)$userid)."',
+                                             `nachricht`  = '".up($_POST['eintrag'],1)."',
+                                             `ip`         = '".$userip."'");
+
+                $mgbid = "mgbid(".$_GET['id'].")";
+                $qry = db("INSERT INTO ".$db['ipcheck']."
+                                     SET `ip`   = '".$userip."',
+                                             `what` = '".$mgbid."',
+                                             `time` = '".((int)time())."'");
+
+                $index = info(_usergb_entry_successful, "?action=user&amp;id=".$_GET['id']."&show=gb");
+            }
+        } elseif($_GET['do'] == 'edit') {
+                if($_POST['reg'] == $userid || permission('editusers'))
+                {
+                    if($_POST['reg'] == 0)
+                    {
+                         $addme = "`nick`       = '".up($_POST['nick'])."',
+                                             `email`      = '".up($_POST['email'])."',
+                                             `hp`         = '".links($_POST['hp'])."',";
+                    }
+
+                    $editedby = show(_edited_by, array("autor" => autor($userid),
+                                                                                         "time" => date("d.m.Y H:i", time())._uhr));
+
+                    $upd = db("UPDATE ".$db['usergb']."
+                                         SET ".$addme."
+                                                 `nachricht`  = '".up($_POST['eintrag'],1)."',
+                                                 `reg`        = '".((int)$_POST['reg'])."',
+                                                 `editby`     = '".addslashes($editedby)."'
+                                         WHERE id = '".intval($_GET['gbid'])."'");
+
+                    $index = info(_gb_edited, "?action=user&show=gb&id=".$_GET['id']);
+                } else {
+                    $index = error(_error_edit_post,1);
+                }
+        }
+    } else{
+            $index = error(_user_dont_exist,1);
+    }
 break;
 case 'preview';
   header("Content-type: text/html; charset=utf-8");
@@ -1500,11 +1564,11 @@ case 'preview';
   }
 
   if($regCheck)
-	{
+    {
     $get_hp = $_POST['hp'];
     $get_email = $_POST['email'];
     $get_nick = $_POST['nick'];
-  
+
     $onoff = "";
     $avatar = "";
     $nick = show(_link_mailto, array("nick" => re($get_nick),
@@ -1518,21 +1582,21 @@ case 'preview';
 
   if($get_hp) $gbhp = show(_hpicon, array("hp" => links($get_hp)));
   else $gbhp = "";
-  
+
   if($get_email) $gbemail = show(_emailicon, array("email" => eMailAddr($get_email)));
   else $gbemail = "";
 
   $titel = show(_eintrag_titel, array("postid" => $get_id,
-										 				     			"datum" => date("d.m.Y", time()),
-	  									 		 			    	"zeit" => date("H:i", time())._uhr,
+                                                                          "datum" => date("d.m.Y", time()),
+                                                                        "zeit" => date("H:i", time())._uhr,
                                       "edit" => $edit,
                                       "delete" => $delete));
 
   if($chkMe == 4) $posted_ip = $ip;
   else            $posted_ip = _logged;
 
-	$index .= show("page/comments_show", array("titel" => $titel,
-	  		   														       "comment" => bbcode($_POST['eintrag']),
+    $index .= show("page/comments_show", array("titel" => $titel,
+                                                                                "comment" => bbcode($_POST['eintrag']),
                                              "nick" => $get_nick,
                                              "hp" => $gbhp,
                                              "editby" => $editby,
@@ -1546,194 +1610,228 @@ case 'preview';
   exit;
 break;
 case 'editprofile';
-$where = _site_user_editprofil;
-if($chkMe == "unlogged")
-    $index = error(_error_have_to_be_logged, 1);
-    else 
+  $where = _site_user_editprofil;
+  if($chkMe == "unlogged")
+  {
+      $index = error(_error_have_to_be_logged, 1);
+  } else {
+    if($_GET['gallery'] == "delete")
     {
-        if(isset($_GET['gallery']) ? $_GET['gallery'] : '' == "delete")
+      $qrygl = db("SELECT * FROM ".$db['usergallery']."
+                   WHERE user = '".$userid."'
+                   AND id = '".intval($_GET['gid'])."'");
+        while($getgl = _fetch($qrygl))
         {
-            $qrygl = db("SELECT * FROM ".$db['usergallery']." WHERE user = '".$userid."' AND id = '".intval($_GET['gid'])."'");
-    	    while($getgl = _fetch($qrygl))
-    	    {
-                db("DELETE FROM ".$db['usergallery']." WHERE id = '".intval($_GET['gid'])."'");
-                $unlinkgallery = show(_gallery_edit_unlink, array("img" => $getgl['pic'], "user" => $userid));
-                unlink($unlinkgallery);
-            }
+        $qry = db("DELETE FROM ".$db['usergallery']."
+                   WHERE id = '".intval($_GET['gid'])."'");
 
-            $index = info(_info_edit_gallery_done, "?action=editprofile&show=gallery");
-
-        } 
-        else if(isset($_GET['do']) ? $_GET['do'] : '' == "edit")	
-        {
-            $check_user = db("SELECT id FROM ".$db['users']." WHERE user = '".intval($_POST['user'])."' AND id != '".$userid."'");
-            $check_nick = db("SELECT id FROM ".$db['users']." WHERE nick = '".$_POST['nick']."' AND id != '".$userid."'");
-            $check_email = db("SELECT id  FROM ".$db['users']." WHERE email = '".$_POST['email']."' AND id != '".$userid."'");
-
-            if(empty($_POST['user']))
-		        $index = error(_empty_user, 1);
-	        else if(empty($_POST['nick'])) 
-  	            $index = error(_empty_nick, 1);
-            else if(empty($_POST['email'])) 
-       		    $index = error(_empty_email, 1);
-            else if(!check_email($_POST['email'])) 
-		        $index = error(_error_invalid_email, 1);
-	        else if(_rows($check_user)) 
-		        $index = error(_error_user_exists, 1);
-	        else if(_rows($check_nick)) 
-		        $index = error(_error_nick_exists, 1);
-	        else if(_rows($check_email)) 
-		        $index = error(_error_email_exists, 1);
-	        else 
-	        {
-                if ($_POST['pwd'])
-                {
-                    $newpwd = "pwd = '".md5($_POST['pwd'])."',";
-                   $index = info(_info_edit_profile_done, "?action=user&amp;id=".$userid."");
-                   $_SESSION['pwd'] = md5($_POST['pwd']);
-		        } 
-		        else 
-		        {
-			        $newpwd = "";
-                    $index = info(_info_edit_profile_done, "?action=user&amp;id=".$userid."");
-		        }
-
-		        $icq = preg_replace("=-=Uis","",$_POST['icq']);
-
-                if($_POST['t'] && $_POST['m'] && $_POST['j']) 
-                    $bday = cal($_POST['t']).".".cal($_POST['m']).".".$_POST['j'];
-
-		        $qrycustom = db("SELECT feldname,type FROM ".$db['profile']);
-		        $customfields = '';
-	            while($getcustom = _fetch($qrycustom))
-	            {
-		            if($getcustom['type'] == 2) 
-		                $customfields .= " ".$getcustom['feldname']." = '".links($_POST[$getcustom['feldname']])."', ";
-		            else 
-		                $customfields .= " ".$getcustom['feldname']." = '".up($_POST[$getcustom['feldname']])."', ";
-		        }
-        
-                db("UPDATE ".$db['users']." SET	".$newpwd." ".$customfields."
-                   `country`      = '".$_POST['land']."',
-                   `user`         = '".up($_POST['user'])."',
-			  	   `nick`         = '".up($_POST['nick'])."',
-				   `rlname`       = '".up($_POST['rlname'])."',
-				   `sex`          = '".((int)$_POST['sex'])."',
-				   `status`       = '".((int)$_POST['status'])."',
-				   `bday`         = '".$bday."',
-				   `email`        = '".up($_POST['email'])."',
-				   `nletter`      = '".((int)$_POST['nletter'])."',
-				   `pnmail`       = '".((int)$_POST['pnmail'])."',
-				   `city`         = '".up($_POST['city'])."',
-				   `gmaps_koord`  = '".up($_POST['gmaps_koord'])."',
-				   `hp`           = '".links($_POST['hp'])."',
-				   `icq`          = '".((int)$icq)."',
-				   `xfire`       = '".up($_POST['xfire'])."',
-				   `signatur`     = '".up($_POST['sig'],1)."',
-				   `beschreibung` = '".up($_POST['ich'],1)."'
-				    WHERE id = ".$userid);
-		  }
-	  } 
-	  elseif(isset($_GET['do']) ? $_GET['do'] : '' == "delete") 
-	  {
-				$getdel = db("SELECT id,nick,email,hp FROM ".$db['users']." WHERE id = '".intval($userid)."'",false,true);
-
-				db("UPDATE ".$db['f_threads']."
-									 SET `t_nick`   = '".up($getdel['nick'])."',
-											 `t_email`  = '".up($getdel['email'])."',
-											 `t_hp`			= '".links($getdel['hp'])."',
-											 `t_reg`		= '0'
-									 WHERE t_reg = '".intval($getdel['id'])."'");        
-	
-				db("UPDATE ".$db['f_posts']."
-									 SET `nick`   = '".up($getdel['nick'])."',
-											 `email`  = '".up($getdel['email'])."',
-											 `hp`			= '".links($getdel['hp'])."',
-											 `reg`		= '0'
-									 WHERE reg = '".intval($getdel['id'])."'");				
-	
-				db("UPDATE ".$db['newscomments']."
-									 SET `nick`     = '".up($getdel['nick'])."',
-											 `email`    = '".up($getdel['email'])."',
-											 `hp`       = '".links($getdel['hp'])."',
-											 `reg`			= '0'
-									 WHERE reg = '".intval($getdel['id'])."'");
-	
-				db("UPDATE ".$db['acomments']."
-									 SET `nick`     = '".up($getdel['nick'])."',
-											 `email`    = '".up($getdel['email'])."',
-											 `hp`       = '".links($getdel['hp'])."',
-											 `reg`			= '0'
-									 WHERE reg = '".intval($getdel['id'])."'");
-
-				db("DELETE FROM ".$db['msg']." WHERE von = '".intval($getdel['id'])."' OR an = '".intval($getdel['id'])."'");
-				db("DELETE FROM ".$db['news']." WHERE autor = '".intval($getdel['id'])."'");
-				db("DELETE FROM ".$db['permissions']." WHERE user = '".intval($getdel['id'])."'");
-				db("DELETE FROM ".$db['squaduser']." WHERE user = '".intval($getdel['id'])."'");
-				db("DELETE FROM ".$db['buddys']." WHERE user = '".intval($getdel['id'])."' OR buddy = '".intval($getdel['id'])."'");
-				db("UPDATE ".$db['usergb']." SET `reg` = 0 WHERE reg = ".intval($getdel['id'])."");
-				db("DELETE FROM ".$db['userpos']." WHERE user = '".intval($getdel['id'])."'");
-				db("DELETE FROM ".$db['users']." WHERE id = '".intval($getdel['id'])."'");
-				db("DELETE FROM ".$db['userstats']." WHERE user = '".intval($getdel['id'])."'");
-	
-				foreach($picformat as $tmpendung)
-				{
-					if(file_exists(basePath."/inc/images/uploads/userpics/".intval($getdel['id']).".".$tmpendung))
-					{
-						@unlink(basePath."/inc/images/uploads/userpics/".intval($getdel['id']).".".$tmpendung);
-					}
-					if(file_exists(basePath."/inc/images/uploads/useravatare/".intval($getdel['id']).".".$tmpendung))
-					{
-						@unlink(basePath."/inc/images/uploads/useravatare/".intval($getdel['id']).".".$tmpendung);
-					}
-				}
-	
-				$index = info(_info_account_deletet, '../news/');
-    } else {
-      $qry = db("SELECT * FROM ".$db['users']." WHERE id = '".$userid."'");
-	    $get = _fetch($qry);
-
-	    if($get['sex'] == "1") $sex = _pedit_male;
-	    elseif($get['sex'] == "2") $sex = _pedit_female;
-	    else $sex = _pedit_sex_ka;
-
-	    if($get['status'] == 1) $status = _pedit_aktiv;
-      else $status = _pedit_inaktiv;
-
-	    $qryl = db("SELECT * FROM ".$db['users']."
-		    					WHERE id = '".$userid."'");
-	    $getl = _fetch($qryl);
-
-	    if($getl['level'] == 1)
-		    $clan = '<input type="hidden" name="status" value="1" />';
-	    else 
-	    {
-            $qrycustom = db("SELECT * FROM ".$db['profile']." WHERE kid = '2' AND shown = '1' ORDER BY id ASC");
-            $custom_clan = '';
-            while($getcustom = _fetch($qrycustom))
-            {
-                $getcontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']." WHERE id = '".$userid."'",false,true);
-                $custom_clan .= show(_profil_edit_custom, array("name" => pfields_name($getcustom['name']).":", "feldname" => $getcustom['feldname'], "value" => re($getcontent[$getcustom['feldname']])));
-            }
-
-            $clan = show($dir."/edit_clan", array("clan" => _profil_clan,
-			                                      "pstatus" => _profil_status,
-					  					          "pexclans" => _profil_exclans,
-						  				          "status" => $status,
-							  			          "exclans" => $get['ex'],
-								  		          "custom_clan" => $custom_clan));
+        $unlinkgallery = show(_gallery_edit_unlink, array("img" => $getgl['pic'],
+                                                          "user" => $userid));
+        unlink($unlinkgallery);
       }
 
-      $bdayday = 0; $bdaymonth = 0; $bdayyear = 0;
-	  if(!empty($get['bday']))
-		list($bdayday, $bdaymonth, $bdayyear) = explode('.', $get['bday']);
-		
+      $index = info(_info_edit_gallery_done, "?action=editprofile&show=gallery");
+
+    } elseif($_GET['do'] == "edit")	{
+            $check_user = db("SELECT id FROM ".$db['users']."
+                                              WHERE user = '".intval($_POST['user'])."'
+                                              AND id != '".$userid."'");
+          $check_nick = db("SELECT id FROM ".$db['users']."
+                                              WHERE nick = '".$_POST['nick']."'
+                                              AND id != '".$userid."'");
+          $check_email = db("SELECT id  FROM ".$db['users']."
+                                               WHERE email = '".$_POST['email']."'
+                                               AND id != '".$userid."'");
+
+      if(empty($_POST['user']))
+      {
+            $index = error(_empty_user, 1);
+        } elseif(empty($_POST['nick'])) {
+          $index = error(_empty_nick, 1);
+      } elseif(empty($_POST['email'])) {
+            $index = error(_empty_email, 1);
+        } elseif(!check_email($_POST['email'])) {
+            $index = error(_error_invalid_email, 1);
+        } elseif(_rows($check_user)) {
+            $index = error(_error_user_exists, 1);
+        } elseif(_rows($check_nick)) {
+            $index = error(_error_nick_exists, 1);
+        } elseif(_rows($check_email)) {
+            $index = error(_error_email_exists, 1);
+        } else {
+            if ($_POST['pwd'])
+            {
+                $newpwd = "pwd = '".md5($_POST['pwd'])."',";
+
+          $index = info(_info_edit_profile_done, "?action=user&amp;id=".$userid."");
+          $_SESSION['pwd'] = md5($_POST['pwd']);
+            } else {
+                $newpwd = "";
+          $index = info(_info_edit_profile_done, "?action=user&amp;id=".$userid."");
+            }
+
+            $icq = preg_replace("=-=Uis","",$_POST['icq']);
+
+        if($_POST['t'] && $_POST['m'] && $_POST['j']) $bday = cal($_POST['t']).".".cal($_POST['m']).".".$_POST['j'];
+        if($_POST['steamid3']) $steamid = $_POST['steamid1'].":".$_POST['steamid2'].":".$_POST['steamid3'];
+
+            $qrycustom = db("SELECT feldname,type FROM ".$db['profile']);
+          while($getcustom = _fetch($qrycustom))
+          {
+              if($getcustom['type'] == 2) $customfields .= " ".$getcustom['feldname']." = '".links($_POST[$getcustom['feldname']])."', ";
+              else $customfields .= " ".$getcustom['feldname']." = '".up($_POST[$getcustom['feldname']])."', ";
+            }
+
+          $qry = db("UPDATE ".$db['users']."
+                       SET	".$newpwd."
+                        ".$customfields."
+                  `country`      = '".$_POST['land']."',
+                  `user`         = '".up($_POST['user'])."',
+                                   `nick`         = '".up($_POST['nick'])."',
+                                    `rlname`       = '".up($_POST['rlname'])."',
+                                    `sex`          = '".((int)$_POST['sex'])."',
+                                    `status`       = '".((int)$_POST['status'])."',
+                                    `bday`         = '".$bday."',
+                                    `email`        = '".up($_POST['email'])."',
+                                    `nletter`      = '".((int)$_POST['nletter'])."',
+                                    `pnmail`       = '".((int)$_POST['pnmail'])."',
+                                    `city`         = '".up($_POST['city'])."',
+                                    `gmaps_koord`  = '".up($_POST['gmaps_koord'])."',
+                                    `hp`           = '".links($_POST['hp'])."',
+                                    `icq`          = '".((int)$icq)."',
+                                    `hlswid`       = '".up($_POST['hlswid'])."',
+                                    `steamid`      = '".$steamid."',
+                                    `signatur`     = '".up($_POST['sig'],1)."',
+                                    `beschreibung` = '".up($_POST['ich'],1)."'
+                      WHERE id = ".$userid);
+          }
+      } elseif($_GET['do'] == "delete") {
+                $qrydel = db("SELECT id,nick,email,hp FROM ".$db['users']."
+                                            WHERE id = '".intval($userid)."'");
+                $getdel = _fetch($qrydel);
+
+                $qry = db("UPDATE ".$db['f_threads']."
+                                     SET `t_nick`   = '".up($getdel['nick'])."',
+                                             `t_email`  = '".up($getdel['email'])."',
+                                             `t_hp`			= '".links($getdel['hp'])."',
+                                             `t_reg`		= '0'
+                                     WHERE t_reg = '".intval($getdel['id'])."'");
+
+                $qry = db("UPDATE ".$db['f_posts']."
+                                     SET `nick`   = '".up($getdel['nick'])."',
+                                             `email`  = '".up($getdel['email'])."',
+                                             `hp`			= '".links($getdel['hp'])."',
+                                             `reg`		= '0'
+                                     WHERE reg = '".intval($getdel['id'])."'");
+
+                $qry = db("UPDATE ".$db['newscomments']."
+                                     SET `nick`     = '".up($getdel['nick'])."',
+                                             `email`    = '".up($getdel['email'])."',
+                                             `hp`       = '".links($getdel['hp'])."',
+                                             `reg`			= '0'
+                                     WHERE reg = '".intval($getdel['id'])."'");
+
+                $qry = db("UPDATE ".$db['acomments']."
+                                     SET `nick`     = '".up($getdel['nick'])."',
+                                             `email`    = '".up($getdel['email'])."',
+                                             `hp`       = '".links($getdel['hp'])."',
+                                             `reg`			= '0'
+                                     WHERE reg = '".intval($getdel['id'])."'");
+
+                $del = db("DELETE FROM ".$db['msg']."
+                                     WHERE von = '".intval($getdel['id'])."'
+                                     OR an = '".intval($getdel['id'])."'");
+
+                $del = db("DELETE FROM ".$db['news']."
+                                     WHERE autor = '".intval($getdel['id'])."'");
+
+                $del = db("DELETE FROM ".$db['permissions']."
+                                     WHERE user = '".intval($getdel['id'])."'");
+
+                $del = db("DELETE FROM ".$db['squaduser']."
+                                     WHERE user = '".intval($getdel['id'])."'");
+
+                $del = db("DELETE FROM ".$db['buddys']."
+                                     WHERE user = '".intval($getdel['id'])."'
+                                     OR buddy = '".intval($getdel['id'])."'");
+
+                $upd = db("UPDATE ".$db['usergb']."
+                                     SET `reg` = 0
+                                     WHERE reg = ".intval($getdel['id'])."");
+
+                $del = db("DELETE FROM ".$db['userpos']."
+                                     WHERE user = '".intval($getdel['id'])."'");
+
+                $del = db("DELETE FROM ".$db['users']."
+                                     WHERE id = '".intval($getdel['id'])."'");
+
+                $del = db("DELETE FROM ".$db['userstats']."
+                                     WHERE user = '".intval($getdel['id'])."'");
+
+                foreach($picformat as $tmpendung)
+                {
+                    if(file_exists(basePath."/inc/images/uploads/userpics/".intval($getdel['id']).".".$tmpendung))
+                    {
+                        @unlink(basePath."/inc/images/uploads/userpics/".intval($getdel['id']).".".$tmpendung);
+                    }
+                    if(file_exists(basePath."/inc/images/uploads/useravatare/".intval($getdel['id']).".".$tmpendung))
+                    {
+                        @unlink(basePath."/inc/images/uploads/useravatare/".intval($getdel['id']).".".$tmpendung);
+                    }
+                }
+
+                $index = info(_info_account_deletet, '../news/');
+    } else {
+      $qry = db("SELECT * FROM ".$db['users']."
+                             WHERE id = '".$userid."'");
+        $get = _fetch($qry);
+
+        if($get['sex'] == "1") $sex = _pedit_male;
+        elseif($get['sex'] == "2") $sex = _pedit_female;
+        else $sex = _pedit_sex_ka;
+
+        if($get['status'] == 1) $status = _pedit_aktiv;
+      else $status = _pedit_inaktiv;
+
+        $qryl = db("SELECT * FROM ".$db['users']."
+                                WHERE id = '".$userid."'");
+        $getl = _fetch($qryl);
+
+        if($getl['level'] == "1")
+        {
+            $clan = '<input type="hidden" name="status" value="1" />';
+        } else {
+          $qrycustom = db("SELECT * FROM ".$db['profile']."
+                                     WHERE kid = '2' AND shown = '1'
+                                     ORDER BY id ASC");
+          while($getcustom = _fetch($qrycustom))
+          {
+              $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
+                                     WHERE id = '".$userid."'" );
+          $getcontent = _fetch($qrycontent);
+              $custom_clan .= show(_profil_edit_custom, array("name" => pfields_name($getcustom['name']).":",
+                                                                                       "feldname" => $getcustom['feldname'],
+                                                                                      "value" => re($getcontent[$getcustom['feldname']])));
+            }
+
+          $clan = show($dir."/edit_clan", array("clan" => _profil_clan,
+                                                                  "pstatus" => _profil_status,
+                                                                  "pexclans" => _profil_exclans,
+                                                                  "status" => $status,
+                                                                  "exclans" => $get['ex'],
+                                                                  "custom_clan" => $custom_clan));
+      }
+
+      list($steamid1,$steamid2,$steamid3) = explode(':', $get['steamid']);
+        list($bdayday, $bdaymonth, $bdayyear) = explode('.', $get['bday']);
+
       if($_GET['show'] == "gallery")
       {
-          $qrygl = db("SELECT * FROM ".$db['usergallery']." WHERE user = '".$userid."' ORDER BY id DESC");
-          $color = 1; $gal = '';
-	      while($getgl = _fetch($qrygl))
-	      {
+        $qrygl = db("SELECT * FROM ".$db['usergallery']."
+                     WHERE user = '".$userid."'
+                     ORDER BY id DESC");
+          while($getgl = _fetch($qrygl))
+          {
           $pic = show(_gallery_pic_link, array("img" => $getgl['pic'],
                                                "user" => $userid));
           $delete = show(_gallery_deleteicon, array("id" => $getgl['id']));
@@ -1755,66 +1853,70 @@ if($chkMe == "unlogged")
                                                  "showgallery" => $gal));
       } else {
         $dropdown_age = show(_dropdown_date, array("day" => dropdown("day",$bdayday,1),
-			 	        	                                 "month" => dropdown("month",$bdaymonth,1),
-                                      	           "year" => dropdown("year",$bdayyear,1)));
+                                                              "month" => dropdown("month",$bdaymonth,1),
+                                                     "year" => dropdown("year",$bdayyear,1)));
 
-        $qrycustom = db("SELECT * FROM ".$db['profile']." WHERE kid = '1' AND shown = '1' ORDER BY id ASC");
-	      while($getcustom = _fetch($qrycustom))
-	      {
-		      $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
-	  			  	              WHERE id = '".$userid."'
-						                LIMIT 1");
+        $qrycustom = db("SELECT * FROM ".$db['profile']."
+                                   WHERE kid = '1' AND shown = '1'
+                         ORDER BY id ASC");
+          while($getcustom = _fetch($qrycustom))
+          {
+              $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
+                                      WHERE id = '".$userid."'
+                                        LIMIT 1");
           $getcontent = _fetch($qrycontent);
 
           $custom_about .= show(_profil_edit_custom, array("name" => re(pfields_name($getcustom['name'])).":",
-		  	                           											   "feldname" => $getcustom['feldname'],
-						  								                             "value" => re($getcontent[$getcustom['feldname']])));
-		    }
+                                                                                        "feldname" => $getcustom['feldname'],
+                                                                                       "value" => re($getcontent[$getcustom['feldname']])));
+            }
 
-        $qrycustom = db("SELECT * FROM ".$db['profile']." WHERE kid = '3' AND shown = '1' ORDER BY id ASC");
-	      while($getcustom = _fetch($qrycustom))
-	      {
-		      $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
-	  		        		        WHERE id = '".$userid."'
-						                LIMIT 1");
+        $qrycustom = db("SELECT * FROM ".$db['profile']."
+                                    WHERE kid = '3' AND shown = '1'
+                         ORDER BY id ASC");
+          while($getcustom = _fetch($qrycustom))
+          {
+              $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
+                                      WHERE id = '".$userid."'
+                                        LIMIT 1");
           $getcontent = _fetch($qrycontent);
-		      $custom_contact .= show(_profil_edit_custom, array("name" => re(pfields_name($getcustom['name'])).":",
-		  	                             											   "feldname" => $getcustom['feldname'],
-						  								                               "value" => re($getcontent[$getcustom['feldname']])));
-		    }
+              $custom_contact .= show(_profil_edit_custom, array("name" => re(pfields_name($getcustom['name'])).":",
+                                                                                          "feldname" => $getcustom['feldname'],
+                                                                                         "value" => re($getcontent[$getcustom['feldname']])));
+            }
 
-		    $qrycustom = db("SELECT * FROM ".$db['profile']."
-	  	          			   WHERE kid = '4' AND shown = '1'
+            $qrycustom = db("SELECT * FROM ".$db['profile']."
+                                   WHERE kid = '4' AND shown = '1'
                          ORDER BY id ASC");
-	      while($getcustom = _fetch($qrycustom))
-	      {
-		      $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
-	  		        		        WHERE id = '".$userid."'
-						                LIMIT 1");
-		      $getcontent = _fetch($qrycontent);
+          while($getcustom = _fetch($qrycustom))
+          {
+              $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
+                                      WHERE id = '".$userid."'
+                                        LIMIT 1");
+              $getcontent = _fetch($qrycontent);
           $custom_favos .= show(_profil_edit_custom, array("name" => re(pfields_name($getcustom['name'])).":",
-		  	                            											 "feldname" => $getcustom['feldname'],
-						  								                             "value" => re($getcontent[$getcustom['feldname']])));
-		    }
+                                                                                       "feldname" => $getcustom['feldname'],
+                                                                                       "value" => re($getcontent[$getcustom['feldname']])));
+            }
 
-		    $qrycustom = db("SELECT * FROM ".$db['profile']."
-	             				   WHERE kid = '5' AND shown = '1'
+            $qrycustom = db("SELECT * FROM ".$db['profile']."
+                                    WHERE kid = '5' AND shown = '1'
                          ORDER BY id ASC");
-	      while($getcustom = _fetch($qrycustom))
-	      {
-		      $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
-	  		         		        WHERE id = '".$userid."'
-						                LIMIT 1");
-		      $getcontent = _fetch($qrycontent);
+          while($getcustom = _fetch($qrycustom))
+          {
+              $qrycontent = db("SELECT ".$getcustom['feldname']." FROM ".$db['users']."
+                                       WHERE id = '".$userid."'
+                                        LIMIT 1");
+              $getcontent = _fetch($qrycontent);
 
           $custom_hardware .= show(_profil_edit_custom, array("name" => re(pfields_name($getcustom['name'])).":",
-		  	                            											    "feldname" => $getcustom['feldname'],
-						  								                                "value" => re($getcontent[$getcustom['feldname']])));
-		    }
+                                                                                          "feldname" => $getcustom['feldname'],
+                                                                                          "value" => re($getcontent[$getcustom['feldname']])));
+            }
 
         if(!empty($get['icq']) && $get['icq'] != 0) $icq = $get['icq'];
         if($get['nletter'] == 1) $pnl = "checked=\"checked\"";
-		if($get['pnmail'] == 1) $pnm = "checked=\"checked\"";
+        if($get['pnmail'] == 1) $pnm = "checked=\"checked\"";
 
         $pic = userpic($get['id']);
         $avatar = useravatar($get['id']);
@@ -1822,80 +1924,87 @@ if($chkMe == "unlogged")
           $deletepic = "| "._profil_delete_pic;
         if(!preg_match("#noavatar#",$avatar))
           $deleteava = "| "._profil_delete_ava;
-		  $gmaps = show('membermap/geocoder', array('form' => 'editprofil'));
+          $gmaps = show('membermap/geocoder', array('form' => 'editprofil'));
 
-        
-	    if($userid == $rootAdmin) $delete = _profil_del_admin;
-		else $delete = show("page/button_delete_account", array("id" => $get['id'],"action" => "action=editprofile&amp;do=delete", "value" => _button_title_del_account, "del" => convSpace(_confirm_del_account)));
+
+          if($userid == $rootAdmin) $delete = _profil_del_admin;
+                else $delete = show("page/button_delete_account", array("id" => $get['id'],
+                                                                                                                              "action" => "action=editprofile&amp;do=delete",
+                                                                                                                              "value" => _button_title_del_account,
+                                                                                                                              "del" => convSpace(_confirm_del_account)));
 
         $show = show($dir."/edit_profil", array("hardware" => _profil_hardware,
                                                 "hphead" => _profil_hp,
                                                 "country" => show_countrys($get['country']),
                                                 "pcountry" => _profil_country,
-												"about" => _profil_about,
-												"picturehead" => _profil_pic,
-												"contact" => _profil_contact,
-												"preal" => _profil_real,
-												"pnick" => _nick,
-												"pemail1" => _email,
+                                                                                                "about" => _profil_about,
+                                                                                                "picturehead" => _profil_pic,
+                                                                                                "contact" => _profil_contact,
+                                                                                                "preal" => _profil_real,
+                                                                                                "pnick" => _nick,
+                                                                                                "pemail1" => _email,
                                                 "php" => _hp,
-												"pava" => _profil_avatar,
-												"pbday" => _profil_bday,
-												"psex" => _profil_sex,
-												"pname" => _loginname,
-												"ppwd" => _new_pwd,
-												"picq" => _icq,
-												"psig" => _profil_sig,
-												"ppic" => _profil_ppic,
-												"pxfire" => _xfire,
+                                                                                                "pava" => _profil_avatar,
+                                                                                                "pbday" => _profil_bday,
+                                                                                  "psex" => _profil_sex,
+                                                                                                "pname" => _loginname,
+                                                                                                "ppwd" => _new_pwd,
+                                                                                                "picq" => _icq,
+                                                                                                "psig" => _profil_sig,
+                                                                                                "ppic" => _profil_ppic,
+                                                                                                "phlswid" => _hlswid,
                                                 "pcity" => _profil_city,
                                                 "city" => re($get['city']),
+                                                                                            "psteamid" => _steamid,
                                                 "nletter" => _profil_nletter,
-												"pnmail" => _profil_pnmail,
+                                                                                                "pnmail" => _profil_pnmail,
                                                 "pnl" => $pnl,
-												"pnm" => $pnm,
+                                                                                                "pnm" => $pnm,
                                                 "pwd" => "",
                                                 "dropdown_age" => $dropdown_age,
                                                 "ava" => $avatar,
                                                 "hp" => re($get['hp']),
                                                 "gmaps" => $gmaps,
-												"nick" => re($get['nick']),
-												"name" => re($get['user']),
+                                                                                                "nick" => re($get['nick']),
+                                                                                                "name" => re($get['user']),
                                                 "gmaps_koord" => re($get['gmaps_koord']),
-												"rlname" => re($get['rlname']),
-												"bdayday" => $bdayday,
-												"bdaymonth" => $bdaymonth,
-												"bdayyear" =>$bdayyear,
-												"sex" => $sex,
-												"email" => re($get['email']),
-												"icqnr" => $icq,
-												"sig" => re_bbcode($get['signatur']),
-												"xfire" => $get['xfire'],
-												"clan" => $clan,
-												"pic" => $pic,
-												"editpic" => _profil_edit_pic,
+                                                                                                "rlname" => re($get['rlname']),
+                                                                                                "bdayday" => $bdayday,
+                                                                                                "bdaymonth" => $bdaymonth,
+                                                                                                "bdayyear" =>$bdayyear,
+                                                                                                "sex" => $sex,
+                                                                                                "email" => re($get['email']),
+                                                                                                "icqnr" => $icq,
+                                                                                                "sig" => re_bbcode($get['signatur']),
+                                                                                                "hlswid" => $get['hlswid'],
+                                                                                                "steamid1" => $steamid1,
+                                                "steamid2" => $steamid2,
+                                                "steamid3" => $steamid3,
+                                                                                                "clan" => $clan,
+                                                                                                "pic" => $pic,
+                                                                                                "editpic" => _profil_edit_pic,
                                                 "editava" => _profil_edit_ava,
                                                 "deleteava" => $deleteava,
-		  									    "deletepic" => $deletepic,
+                                                                                          "deletepic" => $deletepic,
                                                 "favos" => _profil_favos,
-												"pich" => _profil_ich,
-												"pposition" => _profil_position,
-												"pstatus" => _profil_status,
-												"position" => getrank($get['id']),
+                                                                                                "pich" => _profil_ich,
+                                                                                                "pposition" => _profil_position,
+                                                                                                "pstatus" => _profil_status,
+                                                                                                "position" => getrank($get['id']),
                                                 "value" => _button_value_edit,
-								  			    "status" => $status,
+                                                                                          "status" => $status,
                                                 "lang" => $language,
-												"sonst" => _profil_sonst,
-												"custom_about" => $custom_about,
-												"custom_contact" => $custom_contact,
-												"custom_favos" => $custom_favos,
-												"custom_hardware" => $custom_hardware,
-												"ich" => re_bbcode($get['beschreibung']),
-												"del" => _profil_del_account,
-												"delete" => $delete));
+                                                                                                "sonst" => _profil_sonst,
+                                                                                                "custom_about" => $custom_about,
+                                                                                                "custom_contact" => $custom_contact,
+                                                                                                "custom_favos" => $custom_favos,
+                                                                                                "custom_hardware" => $custom_hardware,
+                                                                                                "ich" => re_bbcode($get['beschreibung']),
+                                                                                                "del" => _profil_del_account,
+                                                                                                "delete" => $delete));
       }
 
-	    $index = show($dir."/edit", array("profilhead" => _profil_edit_head,
+        $index = show($dir."/edit", array("profilhead" => _profil_edit_head,
                                         "editgallery" => _profil_edit_gallery_link,
                                         "editprofil" => _profil_edit_profil_link,
                                         "nick" => autor($get['id']),
@@ -1906,21 +2015,21 @@ break;
 case 'msg';
   $where = _site_msg;
   if($chkMe == "unlogged")
-	{
-		$index = error(_error_have_to_be_logged, 1);
-	} else {
-	  if(isset($_GET['do']) ? ($_GET['do']  == "show") : false)
-	  {
+    {
+        $index = error(_error_have_to_be_logged, 1);
+    } else {
+      if($_GET['do'] == "show")
+      {
       $qry = db("SELECT * FROM ".$db['msg']."
-  					     WHERE id = ".intval($_GET['id']));
-  	  $get = _fetch($qry);
+                           WHERE id = ".intval($_GET['id']));
+        $get = _fetch($qry);
       if($get['von'] == $userid || $get['an'] == $userid)
       {
-  		  $update = db("UPDATE ".$db['msg']."
-  			  						SET `readed` = 1
-  				  					WHERE id = ".intval($_GET['id']));
+            $update = db("UPDATE ".$db['msg']."
+                                        SET `readed` = 1
+                                        WHERE id = ".intval($_GET['id']));
 
-  		  $delete = show(_delete, array("id" => $get['id']));
+            $delete = show(_delete, array("id" => $get['id']));
 
         if($get['von'] == 0)
         {
@@ -1928,119 +2037,119 @@ case 'msg';
           $answer = "&nbsp;";
         } else {
           $answermsg = show(_msg_answer_msg, array("nick" => autor($get['von'])));
-      	  $answer = show(_msg_answer, array("id" => $get['id']));
-  		}
-		
-		if($get['sendnews'] == 1 || $get['sendnews'] == 2) 
-		{
-		  $sendnews = show(_msg_sendnews_user, array("id" => $get['id'],
-													 "datum" => $get['datum']));
-		} elseif($get['sendnews'] == 3) {
-		  $sendnews = show(_msg_sendnews_done, array("user" => autor($get['sendnewsuser'])));
-		} else { $sendnews = ''; }
-  		 
-		  $index = show($dir."/msg_show", array("answermsg" => $answermsg,
-												"titel" => re($get['titel']),
-												"nachricht" => bbcode($get['nachricht']),
-												"answer" => $answer,
-												"sendnews" => $sendnews,
-												"delete" => $delete));
+            $answer = show(_msg_answer, array("id" => $get['id']));
+          }
+
+        if($get['sendnews'] == 1 || $get['sendnews'] == 2)
+        {
+          $sendnews = show(_msg_sendnews_user, array("id" => $get['id'],
+                                                     "datum" => $get['datum']));
+        } elseif($get['sendnews'] == 3) {
+          $sendnews = show(_msg_sendnews_done, array("user" => autor($get['sendnewsuser'])));
+        } else { $sendnews = ''; }
+
+          $index = show($dir."/msg_show", array("answermsg" => $answermsg,
+                                                "titel" => re($get['titel']),
+                                                "nachricht" => bbcode($get['nachricht']),
+                                                "answer" => $answer,
+                                                "sendnews" => $sendnews,
+                                                "delete" => $delete));
       }
-	  } else if(isset($_GET['do']) ? ($_GET['do']  == "sendnewsdone") : false) {
-		  $qry = db("SELECT * FROM ".$db['msg']."
-					 WHERE id = '".intval($_GET['id'])."'");
-		  while($get = _fetch($qry))
-		  {
-    		 $update = db("UPDATE ".$db['msg']."
-  			  			   SET `sendnews` = 3,
-						       `sendnewsuser` = '".$userid."', 
-						       `readed`= 1
-  				  		   WHERE datum = '".intval($_GET['datum'])."'");
-			
-		    $index = info(_send_news_done, "?action=msg&do=show&id=".$get['id']."");
-	      }
-	  } else if(isset($_GET['do']) ? ($_GET['do']  == "showsended") : false) {
-		  $qry = db("SELECT * FROM ".$db['msg']."
-					 WHERE id = ".intval($_GET['id']));
-		  $get = _fetch($qry);
+      } elseif($_GET['do'] == "sendnewsdone") {
+          $qry = db("SELECT * FROM ".$db['msg']."
+                     WHERE id = '".intval($_GET['id'])."'");
+          while($get = _fetch($qry))
+          {
+             $update = db("UPDATE ".$db['msg']."
+                               SET `sendnews` = 3,
+                               `sendnewsuser` = '".$userid."',
+                               `readed`= 1
+                               WHERE datum = '".intval($_GET['datum'])."'");
+
+            $index = info(_send_news_done, "?action=msg&do=show&id=".$get['id']."");
+          }
+      } elseif($_GET['do'] == "showsended") {
+          $qry = db("SELECT * FROM ".$db['msg']."
+                     WHERE id = ".intval($_GET['id']));
+          $get = _fetch($qry);
 
       if($get['von'] == $userid || $get['an'] == $userid)
       {
-  		  $answermsg = show(_msg_sended_msg, array("nick" => autor($get['an'])));
-  		  $answer = _back;
+            $answermsg = show(_msg_sended_msg, array("nick" => autor($get['an'])));
+            $answer = _back;
 
-  		  $index = show($dir."/msg_show", array("answermsg" => $answermsg,
-												"titel" => re($get['titel']),
-												"nachricht" => bbcode($get['nachricht']),
-												"answer" => $answer,
-												"sendnews" => "",
-												"delete" => ""));
+            $index = show($dir."/msg_show", array("answermsg" => $answermsg,
+                                                "titel" => re($get['titel']),
+                                                "nachricht" => bbcode($get['nachricht']),
+                                                "answer" => $answer,
+                                                "sendnews" => "",
+                                                "delete" => ""));
       }
-	  } else if(isset($_GET['do']) ? ($_GET['do']  == "answer") : false) {
-		  $qry = db("SELECT * FROM ".$db['msg']."
-							   WHERE id = ".intval($_GET['id']));
-		  $get = _fetch($qry);
+      } elseif($_GET['do'] == "answer") {
+          $qry = db("SELECT * FROM ".$db['msg']."
+                               WHERE id = ".intval($_GET['id']));
+          $get = _fetch($qry);
 
       if($get['von'] == $userid || $get['an'] == $userid)
       {
         if(preg_match("#RE:#is",re($get['titel']))) $titel = re($get['titel']);
         else $titel = "RE: ".re($get['titel']);
 
-  		  $index = show($dir."/answer", array("von" => $userid,
-											  "an" => $get['von'],
-											  "titel" => $titel,
-											  "headtitel" => _msg_titel_answer,
-											  "titelhead" => _titel,
-											  "nickhead" => _to,
+            $index = show($dir."/answer", array("von" => $userid,
+                                              "an" => $get['von'],
+                                              "titel" => $titel,
+                                              "headtitel" => _msg_titel_answer,
+                                              "titelhead" => _titel,
+                                              "nickhead" => _to,
                                               "value" => _button_value_msg,
                                               "lang" => $language,
-											  "bbcodehead" => _bbcode,
-											  "eintraghead" => _answer,
-											  "nick" => autor($get['von']),
-											  "zitat" => zitat(autor($get['von']),$get['nachricht'])));
+                                              "bbcodehead" => _bbcode,
+                                              "eintraghead" => _answer,
+                                              "nick" => autor($get['von']),
+                                              "zitat" => zitat(autor($get['von']),$get['nachricht'])));
       }
-	  } else if(isset($_GET['do']) ? ($_GET['do']  == "pn") : false) {
-		  if($chkMe == "unlogged")       $index = error(_error_have_to_be_logged);
-		  elseif($_GET['id'] == $userid) $index = error(_error_msg_self, 1);
-		  else {
+      } elseif($_GET['do'] == "pn") {
+          if($chkMe == "unlogged")       $index = error(_error_have_to_be_logged);
+          elseif($_GET['id'] == $userid) $index = error(_error_msg_self, 1);
+          else {
 
       $titel = show(_msg_from_nick, array("nick" => data($userid,"nick")));
 
-		  $index = show($dir."/answer", array("von" => $userid,
-											  "an" => $_GET['id'],
-											  "titel" => $titel,
-                                          	  "value" => _button_value_msg,
-                                          	  "lang" => $language,
-											  "titelhead" => _titel,
-											  "headtitel" => _msg_titel,
-											  "nickhead" => _to,
-											  "bbcodehead" => _bbcode,
-											  "eintraghead" => _answer,
-											  "nick" => autor($_GET['id']),
-											  "zitat" => ""));
-		  }
-	  } else if(isset($_GET['do']) ? ($_GET['do']  == "sendanswer") : false) {
-	    if(empty($_POST['titel']))
-		  {
-			  $index = error(_empty_titel, 1);
-		  } elseif(empty($_POST['eintrag'])) {
-			  $index = error(_empty_eintrag, 1);
-		  } else {
-			  $qry = db("INSERT INTO ".$db['msg']."
-				         SET `datum`      = '".((int)time())."',
-                       		 `von`        = '".((int)$_POST['von'])."',
-						     `an`         = '".((int)$_POST['an'])."',
-						     `titel`      = '".up($_POST['titel'])."',
-						     `nachricht`  = '".up($_POST['eintrag'], 1)."',
-						     `see`        = '1'");
+          $index = show($dir."/answer", array("von" => $userid,
+                                              "an" => $_GET['id'],
+                                              "titel" => $titel,
+                                                "value" => _button_value_msg,
+                                                "lang" => $language,
+                                              "titelhead" => _titel,
+                                              "headtitel" => _msg_titel,
+                                              "nickhead" => _to,
+                                              "bbcodehead" => _bbcode,
+                                              "eintraghead" => _answer,
+                                              "nick" => autor($_GET['id']),
+                                              "zitat" => ""));
+          }
+      } elseif($_GET['do'] == "sendanswer") {
+        if(empty($_POST['titel']))
+          {
+              $index = error(_empty_titel, 1);
+          } elseif(empty($_POST['eintrag'])) {
+              $index = error(_empty_eintrag, 1);
+          } else {
+              $qry = db("INSERT INTO ".$db['msg']."
+                         SET `datum`      = '".((int)time())."',
+                                `von`        = '".((int)$_POST['von'])."',
+                             `an`         = '".((int)$_POST['an'])."',
+                             `titel`      = '".up($_POST['titel'])."',
+                             `nachricht`  = '".up($_POST['eintrag'], 1)."',
+                             `see`        = '1'");
 
-			  $qry = db("UPDATE ".$db['userstats']."
-				  		 SET `writtenmsg` = writtenmsg+1
-					  	 WHERE user = ".$userid);
+              $qry = db("UPDATE ".$db['userstats']."
+                           SET `writtenmsg` = writtenmsg+1
+                           WHERE user = ".$userid);
 
         $index = info(_msg_answer_done, "?action=msg");
-		  }
-	  } else if(isset($_GET['do']) ? ($_GET['do']  == "delete") : false) {
+          }
+      } elseif($_GET['do'] == "delete") {
       $qry = db("SELECT * FROM ".$db['msg']."
                  WHERE an = '".$userid."'
                  AND see_u = 0");
@@ -2053,15 +2162,15 @@ case 'msg';
             $del = db("DELETE FROM ".$db['msg']."
                        WHERE id = ".intval($_POST['pe'.$get['id']]));
           } else {
-		        $del = db("UPDATE ".$db['msg']."
-			    	    			 SET `see_u` = 1
-				         			 WHERE id = ".intval($_POST['pe'.$get['id']]));
+                $del = db("UPDATE ".$db['msg']."
+                                     SET `see_u` = 1
+                                      WHERE id = ".intval($_POST['pe'.$get['id']]));
           }
         }
-		  }
+          }
 
-    	header("Location: ?action=msg");
-	  } else if(isset($_GET['do']) ? ($_GET['do']  == "deletethis") : false) {
+        header("Location: ?action=msg");
+      } elseif($_GET['do'] == "deletethis") {
       $qry = db("SELECT * FROM ".$db['msg']."
                  WHERE id = '".intval($_GET['id'])."'");
       $get = _fetch($qry);
@@ -2071,13 +2180,13 @@ case 'msg';
         $del = db("DELETE FROM ".$db['msg']."
                    WHERE id = ".intval($_GET['id']));
       } else {
-		    $del = db("UPDATE ".$db['msg']."
-		 	    			   SET `see_u` = 1
-		     	  		   WHERE id = ".intval($_GET['id']));
+            $del = db("UPDATE ".$db['msg']."
+                                SET `see_u` = 1
+                              WHERE id = ".intval($_GET['id']));
       }
 
       $index = info(_msg_deleted, "?action=msg");
-    } else if(isset($_GET['do']) ? ($_GET['do']  == "deletesended") : false) {
+    } elseif($_GET['do'] == "deletesended") {
       $qry = db("SELECT * FROM ".$db['msg']."
                  WHERE von = '".$userid."'
                  AND see = 1");
@@ -2090,444 +2199,510 @@ case 'msg';
             $del = db("DELETE FROM ".$db['msg']."
                        WHERE id = ".intval($_POST['pa'.$get['id']]));
           } else {
-		        $del = db("UPDATE ".$db['msg']."
-			    	    			 SET `see` = 0
-				         			 WHERE id = ".intval($_POST['pa'.$get['id']]));
+                $del = db("UPDATE ".$db['msg']."
+                                     SET `see` = 0
+                                      WHERE id = ".intval($_POST['pa'.$get['id']]));
           }
         }
-		  }
+          }
 
-		  header("Location: ?action=msg");
-	  } 
-	  else if(isset($_GET['do']) ? ($_GET['do']  == "new") : false) 
-	  {
-  		  $qry = db("SELECT id,nick FROM ".$db['users']." WHERE id != '".$userid."' ORDER BY nick");
-  		  $users = '';
-		  while($get = _fetch($qry))
-		  {
-			  $users .= show(_to_users, array("id" => $get['id'],"selected" => "","nick" => data($get['id'], "nick")));
-		  }
+          header("Location: ?action=msg");
+      } elseif($_GET['do'] == "new") {
+          $qry = db("SELECT id,nick FROM ".$db['users']."
+                 WHERE id != '".$userid."'
+                               ORDER BY nick");
+          while($get = _fetch($qry))
+          {
+              $users .= show(_to_users, array("id" => $get['id'],
+                                        "selected" => "",
+                                                                              "nick" => data($get['id'], "nick")));
+          }
 
-  		  $qry = db("SELECT id,user,buddy FROM ".$db['buddys']." WHERE user = ".$userid." ORDER BY user");
-  		  $buddys = '';
-		  while($get = _fetch($qry))
-		  {
-			  $buddys .= show(_to_buddys, array("id" => $get['buddy'],
+          $qry = db("SELECT id,user,buddy FROM ".$db['buddys']."
+                               WHERE user = ".$userid."
+                               ORDER BY user");
+          while($get = _fetch($qry))
+          {
+              $buddys .= show(_to_buddys, array("id" => $get['buddy'],
                                           "selected" => "",
-				  																"nick" => data($get['buddy'], "nick")));
-		  }
+                                                                                  "nick" => data($get['buddy'], "nick")));
+          }
 
-		  $index = show($dir."/new", array("von" => $userid,
-			  															 "an" => _to,
-				  														 "or" => _or,
-					  													 "buddys" => $buddys,
-						  												 "users" => $users,
+          $index = show($dir."/new", array("von" => $userid,
+                                                                           "an" => _to,
+                                                                           "or" => _or,
+                                                                           "buddys" => $buddys,
+                                                                           "users" => $users,
                                        "value" => _button_value_msg,
                                        "lang" => $language,
-							  											 "titelhead" => _titel,
-								  										 "titel" => _msg_titel,
-									  								 	 "nickhead" => _nick,
-										  						 		 "bbcodehead" => _bbcode,
-											  				 			 "eintraghead" => _eintrag,
-												 		  				 "posttitel" => "",
-											 				  			 "error" => "",
-										 						  		 "posteintrag" => ""));
-	  } else if(isset($_GET['do']) ? ($_GET['do']  == "send") : false) {
-    	if(empty($_POST['titel']) || empty($_POST['eintrag']) || $_POST['buddys'] == "-" && $_POST['users'] == "-" || $_POST['buddys'] != "-"
+                                                                           "titelhead" => _titel,
+                                                                           "titel" => _msg_titel,
+                                                                            "nickhead" => _nick,
+                                                                            "bbcodehead" => _bbcode,
+                                                                            "eintraghead" => _eintrag,
+                                                                            "posttitel" => "",
+                                                                            "error" => "",
+                                                                            "posteintrag" => ""));
+      } elseif($_GET['do'] == "send") {
+        if(empty($_POST['titel']) || empty($_POST['eintrag']) || $_POST['buddys'] == "-" && $_POST['users'] == "-" || $_POST['buddys'] != "-"
       && $_POST['users'] != "-" || $_POST['users'] == $userid || $_POST['buddys'] == $userid)
-		  {
-		    if(empty($_POST['titel'])) $error = _empty_titel;
-		    elseif(empty($_POST['eintrag'])) $error = _empty_eintrag;
-		    elseif($_POST['buddys'] == "-" AND $_POST['users'] == "-") $error = _empty_to;
-		    elseif($_POST['buddys'] != "-" AND $_POST['users'] != "-") $error = _msg_to_just_1;
-		    elseif($_POST['buddys'] OR $_POST['users'] == $userid) $error = _msg_not_to_me;
+          {
+            if(empty($_POST['titel'])) $error = _empty_titel;
+            elseif(empty($_POST['eintrag'])) $error = _empty_eintrag;
+            elseif($_POST['buddys'] == "-" AND $_POST['users'] == "-") $error = _empty_to;
+            elseif($_POST['buddys'] != "-" AND $_POST['users'] != "-") $error = _msg_to_just_1;
+            elseif($_POST['buddys'] OR $_POST['users'] == $userid) $error = _msg_not_to_me;
 
-		    $error = show("errors/errortable", array("error" => $error));
+            $error = show("errors/errortable", array("error" => $error));
 
-		    $qry = db("SELECT id FROM ".$db['users']." WHERE id != '".$userid."' ORDER BY nick");
-		    $users = '';
-		    while($get = _fetch($qry))
-		    {
-		      if($get['id'] == $_POST['users']) $selected = "selected=\"selected\"";
-			    else $selected = "";
+            $qry = db("SELECT id FROM ".$db['users']."
+                   WHERE id != '".$userid."'
+                   ORDER BY nick");
+            while($get = _fetch($qry))
+            {
+              if($get['id'] == $_POST['users']) $selected = "selected=\"selected\"";
+                else $selected = "";
 
-    			$users .= show(_to_users, array("id" => $get['id'],
-		    																	"nick" => data($get['id'], "nick"),
-				    															"selected" => $selected));
-		    }
+                $users .= show(_to_users, array("id" => $get['id'],
+                                                                                "nick" => data($get['id'], "nick"),
+                                                                                "selected" => $selected));
+            }
 
-    		$qry = db("SELECT id,user,buddy FROM ".$db['buddys']." WHERE user = ".$userid);
-    		$buddys = '';
-		    while($get = _fetch($qry))
-		    {
-			    if($get['buddy'] == $_POST['buddys']) $selected = "selected=\"selected\"";
-			    else $selected = "";
+            $qry = db("SELECT id,user,buddy FROM ".$db['buddys']."
+                                 WHERE user = ".$userid);
+            while($get = _fetch($qry))
+            {
+                if($get['buddy'] == $_POST['buddys']) $selected = "selected=\"selected\"";
+                else $selected = "";
 
-    			$buddys .= show(_to_buddys, array("id" => $get['buddy'],
-		    																		"nick" => data($get['buddy'], "nick"),
-				    																"selected" => $selected));
-		    }
+                $buddys .= show(_to_buddys, array("id" => $get['buddy'],
+                                                                                    "nick" => data($get['buddy'], "nick"),
+                                                                                    "selected" => $selected));
+            }
 
-		    $index = show($dir."/new", array("von" => $userid,
-				    														 "an" => _to,
-						    												 "or" => _or,
-								    										 "posttitel" => re($_POST['titel']),
-										    								 "posteintrag" => re_bbcode($_POST['eintrag']),
-												    						 "postto" => $_POST['buddys']."".$_POST['users'],
-	    																	 "buddys" => $buddys,
+            $index = show($dir."/new", array("von" => $userid,
+                                                                             "an" => _to,
+                                                                             "or" => _or,
+                                                                             "posttitel" => re($_POST['titel']),
+                                                                             "posteintrag" => re_bbcode($_POST['eintrag']),
+                                                                             "postto" => $_POST['buddys']."".$_POST['users'],
+                                                                             "buddys" => $buddys,
                                          "value" => _button_value_msg,
                                          "lang" => $language,
-			    															 "users" => $users,
-					    													 "titelhead" => _titel,
-							    											 "titel" => _msg_titel,
-									    									 "nickhead" => _nick,
-											    							 "bbcodehead" => _bbcode,
-													    					 "error" => $error,
-															    			 "eintraghead" => _eintrag));
-		  } else {
-				if($_POST['buddys'] == "-") $to = $_POST['users'];
-		    else $to = $_POST['buddys'];
+                                                                             "users" => $users,
+                                                                             "titelhead" => _titel,
+                                                                             "titel" => _msg_titel,
+                                                                             "nickhead" => _nick,
+                                                                             "bbcodehead" => _bbcode,
+                                                                             "error" => $error,
+                                                                             "eintraghead" => _eintrag));
+          } else {
+                if($_POST['buddys'] == "-") $to = $_POST['users'];
+            else $to = $_POST['buddys'];
 
-		    $qry = db("INSERT INTO ".$db['msg']."
-				           SET `datum`      = '".((int)time())."',
+            $qry = db("INSERT INTO ".$db['msg']."
+                           SET `datum`      = '".((int)time())."',
                        `von`        = '".((int)$userid)."',
                        `an`         = '".((int)$to)."',
                        `titel`      = '".up($_POST['titel'])."',
                        `nachricht`  = '".up($_POST['eintrag'], 1)."',
                        `see`        = '1'");
 
-		    db("UPDATE ".$db['userstats']." SET `writtenmsg` = writtenmsg+1 WHERE user = ".$userid);
+            $qry = db("UPDATE ".$db['userstats']."
+                                 SET `writtenmsg` = writtenmsg+1
+                                 WHERE user = ".$userid);
 
-    		$index = info(_msg_answer_done, "?action=msg");
-		  }
-	  } else {
-  		$qry = db("SELECT * FROM ".$db['msg']." WHERE an = ".$userid." AND see_u = '0' ORDER BY datum DESC");
-  		$posteingang = ''; $color = 1;
-	    while($get = _fetch($qry))
-		  {
-    		if(_rows($qry))
-		  	{
+            $index = info(_msg_answer_done, "?action=msg");
+          }
+      } else {
+          $qry = db("SELECT * FROM ".$db['msg']."
+                               WHERE an = ".$userid."
+                 AND see_u = '0'
+                               ORDER BY datum DESC");
+        while($get = _fetch($qry))
+          {
+            if(_rows($qry))
+              {
           if($get['von'] == 0) $absender = _msg_bot;
           else $absender = autor($get['von']);
 
-		  		$titel = show(_msg_in_title, array("titel" => re($get['titel'])));
+                  $titel = show(_msg_in_title, array("titel" => re($get['titel'])));
 
-  				$delete = _delete;
-	  			$date = date("d.m.Y H:i", $get['datum'])._uhr;
-		  		if($get['readed'] == 0 && $get['see_u'] == 0) $new = _newicon;
+                  $delete = _delete;
+                  $date = date("d.m.Y H:i", $get['datum'])._uhr;
+                  if($get['readed'] == 0 && $get['see_u'] == 0) $new = _newicon;
           else                                          $new = '';
-			  } else {
-				  $titel = "-";
-				  $absender = "-";
-				  $date = "-";
-				  $delete = "";
-				  $new = "";
-			  }
+              } else {
+                  $titel = "-";
+                  $absender = "-";
+                  $date = "-";
+                  $delete = "";
+                  $new = "";
+              }
 
-            $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
-	  	    $posteingang.= show($dir."/posteingang", array("titel" => $titel,
-		  	  												"absender" => $absender,
-			  	  											"datum" => $date,
-                                                            "class" => $class,
-					  	  									"delete" => $delete,
-						  	  								"new" => $new,
-							  	  							"id" => $get['id']));
-			}
+        $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
+            $posteingang.= show($dir."/posteingang", array("titel" => $titel,
+                                                                                                         "absender" => $absender,
+                                                                                                         "datum" => $date,
+                                                       "class" => $class,
+                                                                                                         "delete" => $delete,
+                                                                                                         "new" => $new,
+                                                                                                         "id" => $get['id']));
+            }
 
-  		$qry = db("SELECT * FROM ".$db['msg']."
-	  						 WHERE von = ".$userid."
-		  					 AND see = 1
-			  				 ORDER BY datum DESC");
-  		
-  		$postausgang = ''; $color = 1;
-	    while($get = _fetch($qry))
-		  {
-			  $titel = show(_msg_out_title, array("titel" => re($get['titel'])));
-			  $delete = _msg_delete_sended;
-			  $date = date("d.m.Y H:i", $get['datum'])._uhr;
+          $qry = db("SELECT * FROM ".$db['msg']."
+                               WHERE von = ".$userid."
+                               AND see = 1
+                               ORDER BY datum DESC");
+
+        while($get = _fetch($qry))
+          {
+              $titel = show(_msg_out_title, array("titel" => re($get['titel'])));
+              $delete = _msg_delete_sended;
+              $date = date("d.m.Y H:i", $get['datum'])._uhr;
 
 
-	    	if($get['readed'] == "0") $readed = _noicon;
-			  else $readed = _yesicon;
+            if($get['readed'] == "0") $readed = _noicon;
+              else $readed = _yesicon;
 
-            $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
-		    $postausgang.= show($dir."/postausgang", array("titel" => $titel,
-				    									"empfaenger" => autor($get['an']),
-						    							"datum" => $date,
-                                                        "class" => $class,
-										    			"readed" => $readed,
-												    	"delete" => $delete,
-														"id" => $get['id']));
-			}
+        $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
+            $postausgang.= show($dir."/postausgang", array("titel" => $titel,
+                                                                                                         "empfaenger" => autor($get['an']),
+                                                                                                         "datum" => $date,
+                                                       "class" => $class,
+                                                                                                         "readed" => $readed,
+                                                                                                         "delete" => $delete,
+                                                                                                         "id" => $get['id']));
+            }
 
-		  $msghead = show(_msghead, array("nick" => autor($userid)));
+          $msghead = show(_msghead, array("nick" => autor($userid)));
 
-  		$index = show($dir."/msg", array("msghead" => $msghead,
-	  									 "posteingang" => _posteingang,
-		  								 "postausgang" => _postausgang,
-			  							 "titel" => _msg_title,
-                                         "del" => _msg_del,
-					  					 "absender" => _msg_absender,
-						  				 "legende" => _legende,
-							  			 "legendemsg" => _legende_msg,
-								  		 "legendereaded" => _legende_readed,
-									  	 "empfaenger" => _msg_empfaenger,
-										 "datum" => _datum,
-										 "new" => _msg_new,
-										 "newicon" => _newicon,
-										 "yesno" => _yesno,
-										 "deleteicon" => _deleteicon_blank,
-										 "showincoming" => $posteingang,
-										 "showsended" => $postausgang));
-	  }
-	}
+          $index = show($dir."/msg", array("msghead" => $msghead,
+                                                                              "posteingang" => _posteingang,
+                                                                              "postausgang" => _postausgang,
+                                                                              "titel" => _msg_title,
+                                        "del" => _msg_del,
+                                                                              "absender" => _msg_absender,
+                                                                              "legende" => _legende,
+                                                                              "legendemsg" => _legende_msg,
+                                                                              "legendereaded" => _legende_readed,
+                                                                              "empfaenger" => _msg_empfaenger,
+                                                                              "datum" => _datum,
+                                                                              "new" => _msg_new,
+                                        "newglobal" => $newglobal,
+                                                                              "newicon" => _newicon,
+                                                                              "yesno" => _yesno,
+                                                                              "deleteicon" => _deleteicon_blank,
+                                                                              "showincoming" => $posteingang,
+                                                                              "showsended" => $postausgang));
+      }
+    }
 break;
 case 'userlist';
-    $where = _site_ulist;
-    $page = (isset($_GET['page']) ? $_GET['page'] : 1);
-    $entrys = cnt($db['users']," WHERE level != 0");
-    switch(isset($_GET['show']) ? $_GET['show'] : '') 
+  $where = _site_ulist;
+  if(isset($_GET['page'])) $page = $_GET['page'];
+  else $page = 1;
+
+  $entrys = cnt($db['users']," WHERE level != 0");
+
+if($_GET['show'] == "search")
+{
+    $qry = db("SELECT id,nick,level,email,hp,steamid,hlswid,bday,sex,icq,status,position,regdatum
+                         FROM ".$db['users']."
+             WHERE nick LIKE '%".$_GET['search']."%'
+             AND level != 0
+             ORDER BY nick
+             LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+} elseif($_GET['show'] == "bday") {
+    $qry = db("SELECT id,nick,level,email,hp,steamid,hlswid,bday,sex,icq,status,position,regdatum
+                         FROM ".$db['users']."
+             WHERE bday LIKE '".date("d", intval($_GET['time'])).".".date("m", intval($_GET['time'])).".____"."'
+             AND level != 0
+             ORDER BY nick
+             LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+} elseif($_GET['show'] == "newreg") {
+      $qry = db("SELECT id,nick,level,email,hp,steamid,hlswid,bday,
+                      sex,icq,status,position,regdatum FROM ".$db['users']."
+               WHERE regdatum > '".$_SESSION['lastvisit']."'
+               AND level != '0'
+                           ORDER BY regdatum DESC,nick
+               LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+  } elseif($_GET['show'] == "lastlogin") {
+      $qry = db("SELECT id,nick,level,email,hp,steamid,hlswid,bday,
+                      sex,icq,status,position,regdatum FROM ".$db['users']."
+               WHERE level != '0'
+                           ORDER BY time DESC,nick
+               LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+  } elseif($_GET['show'] == "lastreg") {
+      $qry = db("SELECT id,nick,level,email,hp,steamid,hlswid,bday,sex,
+                      icq,status,position,regdatum FROM ".$db['users']."
+               WHERE level != '0'
+                           ORDER BY regdatum DESC,nick
+               LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+  } elseif($_GET['show'] == "online") {
+      $qry = db("SELECT id,nick,level,email,hp,steamid,hlswid,bday,
+                      sex,icq,status,position,time FROM ".$db['users']."
+               WHERE level != '0'
+                           ORDER BY time DESC,nick
+               LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+  } elseif($_GET['show'] == "country") {
+      $qry = db("SELECT id,nick,level,email,hp,steamid,
+                      hlswid,bday,sex,icq,status,position,country FROM ".$db['users']."
+               WHERE level != '0'
+                           ORDER BY country,nick
+               LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+  } elseif($_GET['show'] == "sex") {
+      $qry = db("SELECT id,nick,level,email,hp,steamid,hlswid,
+                      bday,sex,icq,status,position FROM ".$db['users']."
+               WHERE level != '0'
+                           ORDER BY sex DESC
+               LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+  } elseif($_GET['show'] == "banned") {
+      $qry = db("SELECT id,nick,level,email,hp,steamid,
+                      hlswid,bday,sex,icq,status,position FROM ".$db['users']."
+               WHERE level = '0'
+                           ORDER BY nick
+               LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+  } else {
+      $qry = db("SELECT id,nick,level,email,hp,steamid,hlswid,bday,sex,
+               icq,status,position FROM ".$db['users']."
+               WHERE level != '0'
+                           ORDER BY level DESC,nick
+               LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist."");
+
+  }
+    while($get = _fetch($qry))
     {
-        case 'search':
-            $qry = " WHERE nick LIKE '%".$_GET['search']."%' AND level != 0 ORDER BY nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        case 'bday':
-          $qry = " WHERE bday LIKE '".date("d", intval($_GET['time'])).".".date("m", intval($_GET['time'])).".____"."' AND level != 0 ORDER BY nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        case 'newreg':
-            $qry = " WHERE regdatum > '".$_SESSION['lastvisit']."' AND level != '0' ORDER BY regdatum DESC,nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        case 'lastlogin':
-            $qry = " WHERE level != '0' ORDER BY time DESC,nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        case 'lastreg':
-            $qry = " WHERE level != '0' ORDER BY regdatum DESC,nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        case 'online':
-           $qry = " WHERE level != '0' ORDER BY time DESC,nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        case 'country':
-            $qry = " WHERE level != '0' ORDER BY country,nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        case 'sex':
-            $qry = " WHERE level != '0' ORDER BY sex DESC LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        case 'banned':
-            $qry = " WHERE level = '0' ORDER BY nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-        default:
-            $qry = " WHERE level != '0' ORDER BY level DESC,nick LIMIT ".($page - 1)*$maxuserlist.",".$maxuserlist;
-        break;
-    }
-  
-    $qry = db("SELECT id,nick,level,email,hp,xfire,bday,sex,icq,status,position,regdatum FROM ".$db['users'].$qry);
-    $color = 1; $userliste = '';
-	while($get = _fetch($qry))
-	{
-		$email = show(_emailicon, array("email" => eMailAddr($get['email'])));
-		if(empty($get['icq']))
-			$icq = "-";
-		else 
-		{
-            $uin = show(_icqstatus, array("uin" => $get['icq']));
-            $icq = '<a href="http://www.icq.com/whitepages/about_me.php?uin='.$get['icq'].'" target="_blank">'.$uin.'</a>';
-		}
+        $email = show(_emailicon, array("email" => eMailAddr($get['email'])));
 
-		$hp = (empty($get['hp']) ? '-' : show(_hpicon, array("hp" => $get['hp'])));
-		$sex = ($get['sex'] == 1 ? _maleicon : ($get['sex'] == 2 ? _femaleicon : "-"));
-		$getstatus = ($get['status'] ? _aktiv_icon : _inaktiv_icon);
-        $status = (data($get['id'], "level") > 1 ? $getstatus : '');
-		$class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
+        if(empty($get['hlswid'])) $hlsw = "-";
+        else $hlsw = show(_hlswicon, array("id" => re($get['hlswid']),
+                                                                            "img" => "1",
+                                                                           "css" => ""));
 
-        if(permission("editusers"))
+        if(empty($get['icq']))
         {
-            $edit = show("page/button_edit", array("id" => "", "action" => "action=admin&amp;edit=".$get['id'], "title" => _button_title_edit));
-            $edit = str_replace("&amp;id=","",$edit);
-            $delete = show("page/button_delete", array("id" => $get['id'], "action" => "action=admin&amp;do=delete", "title" => _button_title_del));
-        } 
-        else 
-        {
-            $edit = "";
-            $delete = "";
+            $icq = "-";
+        } else {
+      $uin = show(_icqstatus, array("uin" => $get['icq']));
+      $icq = '<a href="http://www.icq.com/whitepages/about_me.php?uin='.$get['icq'].'" target="_blank">'.$uin.'</a>';
         }
-        
-        if(!empty($get['xfire']))
-        $xfire = '<div id="infoXfire_'.re($get['xfire']).'">
-        <div style="width:100%;text-align:center"><img src="../inc/images/ajax-loader-mini.gif" alt="" /></div>
-        <script language="javascript" type="text/javascript">DZCP.initXfire("'.re($get['xfire']).'");</script></div>';
-        else
-            $xfire = '-';
-        
-		$userliste .= show($dir."/userliste_show", array("nick" => autor($get['id'],'','',10),
-														 "level" => getrank($get['id']),
-														 "status" => $status,
-														 "email" => $email,
-														 "age" => getAge($get['bday']),
-														 "mf" => $sex,
-                                                         "edit" => $edit,
-                                                         "delete" => $delete,
-                                                         "class" => $class,
-														 "icq" => $icq,
-														 "icquin" => $get['icq'],
-														 "onoff" => onlinecheck($get['id']),
-														 "hp" => $hp,
-														 "xfire" => $xfire));
-    }
 
-    $seiten = nav($entrys,$maxuserlist,"?action=userlist&show=".(isset($_GET['show']) ? $_GET['show'] : 1)."");
+    if(empty($get['hp'])) $hp = "-";
+    else $hp = show(_hpicon, array("hp" => $get['hp']));
+
+        if($get['sex'] == "1")$sex = _maleicon;
+        elseif($get['sex'] == "2")$sex = _femaleicon;
+        else $sex = "-";
+
+        if($get['status'] == 1) $getstatus = _aktiv_icon;
+        else $getstatus = _inaktiv_icon;
+
+        if(data($get['id'], "level") > 1) $status = $getstatus;
+        else $status = "";
+
+        $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
 
     if(permission("editusers"))
-        $edel = '<td class="contentMainTop" colspan="2">&nbsp;</td>';
+    {
+      $edit = show("page/button_edit", array("id" => "",
+                                             "action" => "action=admin&amp;edit=".$get['id'],
+                                             "title" => _button_title_edit));
+      $edit = str_replace("&amp;id=","",$edit);
+      $delete = show("page/button_delete", array("id" => $get['id'],
+                                                 "action" => "action=admin&amp;do=delete",
+                                                 "title" => _button_title_del));
 
-    $search = (isset($_GET['search']) && !empty($_GET['search']) ? $_GET['search'] : _nick);
-	$index = show($dir."/userliste", array("userlistehead" => _userlist,
-										   "nickhead" => _nick,
-                                           "normal" => _ulist_normal,
-                                           "country" => _ulist_country,
-                                           "sex" => _ulist_sex,
-                                           "cnt" => $entrys." "._user,
-                                           "lastreg" => _ulist_lastreg,
-                                           "online" => _ulist_online,
-                                           "age" => _ulist_age,
-                                           "login" => _ulist_last_login,
-                                           "bday" => _ulist_bday,
-                                           "sort" => _ulist_sort,
-                                           "banned" => _ulist_acc_banned,
-                                           "edel" => $edel,
-                                           "search" => $search,
-                                           "value" => _button_value_search,
-										   "mficon" => _mficon_blank,
-                                           "nav" => $seiten,
-										   "statushead" => _status,
-									       "emailicon" => _emailicon_blank,
-										   "addbuddyicon" => _addbuddyicon_blank,
-										   "agehead" => _profil_age,
-										   "icqicon" => _icqicon_blank,
-										   "pnicon" => _pnicon_blank,
-										   "hpicon" => _hpicon_blank,
-										   "xfireicon" => _xfireicon_blank,
-										   "show" => $userliste));
+    } else {
+      $edit = "";
+      $delete = "";
+    }
+
+        $userliste .= show($dir."/userliste_show", array("nick" => autor($get['id'],'','',10),
+                                                                                                         "level" => getrank($get['id']),
+                                                                                                         "status" => $status,
+                                                                                                         "email" => $email,
+                                                                                                         "age" => getAge($get['bday']),
+                                                                                                         "mf" => $sex,
+                                                     "edit" => $edit,
+                                                     "delete" => $delete,
+                                                     "class" => $class,
+                                                                                                         "icq" => $icq,
+                                                                                                         "icquin" => $get['icq'],
+                                                                                                         "onoff" => onlinecheck($get['id']),
+                                                                                                         "hp" => $hp,
+                                                                                                         "hlsw" => $hlsw));
+    }
+
+  $seiten = nav($entrys,$maxuserlist,"?action=userlist&show=".$_GET['show']."");
+
+  if(permission("editusers"))
+  {
+    $edel = '<td class="contentMainTop" colspan="2">&nbsp;</td>';
+  }
+
+  if(isset($_GET['search']) && !empty($_GET['search']))
+    $search = $_GET['search'];
+  else $search = _nick;
+
+    $index = show($dir."/userliste", array("userlistehead" => _userlist,
+                                                                                 "nickhead" => _nick,
+                                         "normal" => _ulist_normal,
+                                         "country" => _ulist_country,
+                                         "sex" => _ulist_sex,
+                                         "cnt" => $entrys." "._user,
+                                         "lastreg" => _ulist_lastreg,
+                                         "online" => _ulist_online,
+                                         "age" => _ulist_age,
+                                         "login" => _ulist_last_login,
+                                         "bday" => _ulist_bday,
+                                         "sort" => _ulist_sort,
+                                         "banned" => _ulist_acc_banned,
+                                         "edel" => $edel,
+                                         "search" => $search,
+                                         "value" => _button_value_search,
+                                                                                 "mficon" => _mficon_blank,
+                                         "nav" => $seiten,
+                                                                                 "statushead" => _status,
+                                                                                 "emailicon" => _emailicon_blank,
+                                                                                 "addbuddyicon" => _addbuddyicon_blank,
+                                                                                 "agehead" => _profil_age,
+                                                                                 "icqicon" => _icqicon_blank,
+                                                                                 "pnicon" => _pnicon_blank,
+                                                                                 "hpicon" => _hpicon_blank,
+                                                                                 "hlswicon" => _hlswicon_blank,
+                                                                                 "show" => $userliste));
 break;
 case 'buddys';
   $where = _site_user_buddys;
   if($chkMe == "unlogged")
-	  $index = error(_error_have_to_be_logged, 1);
-  else 
   {
-	  $qry = db("SELECT * FROM ".$db['buddys']." WHERE user = ".$userid);
-      $buddys = '';
-      if(_rows($qry) >= 1)
+      $index = error(_error_have_to_be_logged, 1);
+  } else {
+      $qry = db("SELECT * FROM ".$db['buddys']."
+                           WHERE user = ".$userid);
+    $too = "";
+      while($get = _fetch($qry))
       {
-          $color = 1; $too = "";
-    	  while($get = _fetch($qry))
-    	  {
-      	      $pn = show(_pn_write, array("id" => $get['buddy'], "nick" => data($get['buddy'], "nick")));
-    		  $delete = show(_buddys_delete, array("id" => $get['buddy']));
-    
-      		    $yesnocheck = db("SELECT * FROM ".$db['buddys']." where user = '".$get['buddy']."' AND buddy = '".$userid."'");
-    
-      		    if(_rows($yesnocheck)) $too = _buddys_yesicon;
-    	  	    else $too = _buddys_noicon;
-    
-              $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
-    		  $buddys .= show($dir."/buddys_show", array("nick" => autor($get['buddy']),
-    			  										 "onoff" => onlinecheck($get['buddy']),
-    				  									 "pn" => $pn,
-                                                         "class" => $class,
-    						  							 "too" => $too,
-    							  						 "delete" => $delete));
-         }
-     }
+        $pn = show(_pn_write, array("id" => $get['buddy'],
+                                  "nick" => data($get['buddy'], "nick")));
+          $delete = show(_buddys_delete, array("id" => $get['buddy']));
 
-	 $qry = db("SELECT id,nick FROM ".$db['users']." WHERE level != 0 ORDER BY nick");
-	 $users = '';
-	 while($get = _fetch($qry))
-	 { $users .= show(_to_users, array("id" => $get['id'], "nick" => data($get['id'], "nick"))); }
+          $yesnocheck = db("SELECT * FROM ".$db['buddys']."
+                                              where user = '".$get['buddy']."'
+                        AND buddy = '".$userid."'");
 
-        $add = show("".$dir."/buddys_add", array("users" => $users, "value" => _button_value_addto));
-		$index = show($dir."/buddys", array("buddyhead" => _buddyhead,
-																				"nick" => _nick,
-																				"pn" => _pnicon_blank,
-																				"mybuddys" => _buddys,
-																				"addbuddys" => _addbuddys,
-																				"buddynick" => _buddynick,
-																				"delete" => _deleteicon_blank,
-																				"too" => _yesno,
-																				"show" => $buddys,
-																				"add" => $add,
-																				"legende" => _legende,
-																				"yes" => _buddys_yesicon,
+          if(_rows($yesnocheck)) $too = _buddys_yesicon;
+          else $too = _buddys_noicon;
+
+      $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++;
+          $buddys .= show($dir."/buddys_show", array("nick" => autor($get['buddy']),
+                                                                                               "onoff" => onlinecheck($get['buddy']),
+                                                                                               "pn" => $pn,
+                                                 "class" => $class,
+                                                                                               "too" => $too,
+                                                                                               "delete" => $delete));
+      }
+
+        $qry = db("SELECT id,nick FROM ".$db['users']."
+               WHERE level != 0
+                             ORDER BY nick");
+        while($get = _fetch($qry))
+        {
+            $users .= show(_to_users, array("id" => $get['id'],
+                                                                            "nick" => data($get['id'], "nick")));
+        }
+
+        $add = show("".$dir."/buddys_add", array("users" => $users,
+                                             "value" => _button_value_addto));
+
+        $index = show($dir."/buddys", array("buddyhead" => _buddyhead,
+                                                                                "nick" => _nick,
+                                                                                "pn" => _pnicon_blank,
+                                                                                "mybuddys" => _buddys,
+                                                                                "addbuddys" => _addbuddys,
+                                                                                "buddynick" => _buddynick,
+                                                                                "delete" => _deleteicon_blank,
+                                                                                "too" => _yesno,
+                                                                                "show" => $buddys,
+                                                                                "add" => $add,
+                                                                                "legende" => _legende,
+                                                                                "yes" => _buddys_yesicon,
                                         "no" => _buddys_noicon,
-																				"legendeaddedtoo" => _buddys_legende_addedtoo,
+                                                                                "legendeaddedtoo" => _buddys_legende_addedtoo,
                                         "legendedontaddedtoo" => _buddys_legende_dontaddedtoo));
 
-        switch (isset($_GET['do']) ? $_GET['do'] : '') 
-        {
-            case 'add':
-                if($_POST['users'] == "-")
-                    $index = error(_error_select_buddy, 1);
-                else if($_POST['users'] == $userid) 
-                    $index = error(_error_buddy_self, 1);
-                else if(!check_buddy($_POST['users'])) 
-                    $index = error(_error_buddy_already_in, 1);
-                else 
-                {
-                    db("INSERT INTO ".$db['buddys']." SET `user` = '".((int)$userid)."', `buddy` = '".((int)$_POST['users'])."'");
-                            
-                    $msg = show(_buddy_added_msg, array("user" => autor($userid)));
-                    $title = _buddy_title;
-                    
-                    db("INSERT INTO ".$db['msg']."
-                        SET `datum`     = '".((int)time())."',
-                            `von`       = '0',
-                            `an`        = '".((int)$_POST['users'])."',
-                            `titel`     = '".up($title)."',
-                            `nachricht` = '".up($msg, 1)."'");
-                            
-                    $index = info(_add_buddy_successful, "?action=buddys");
-                }
-            break;
-            case 'addbuddy':
-                $user = (isset($_GET['id']) ? $_GET['id'] : $_POST['users']);
-                
-                if($user == "-")
-                    $index = error(_error_select_buddy, 1);
-                else if($user == $userid) 
-                    $index = error(_error_buddy_self, 1);
-                 else if(!check_buddy($user)) 
-                    $index = error(_error_buddy_already_in, 1);
-                else 
-                {
-                    db("INSERT INTO ".$db['buddys']." SET `user` = '".((int)$userid)."', `buddy` = '".((int)$user)."'");
-                    $msg = show(_buddy_added_msg, array("user" => addslashes(autor($userid))));
-                    $title = _buddy_title;
-                
-                    db("INSERT INTO ".$db['msg']."
-                        SET `datum`     = '".((int)time())."',
-                            `von`       = '0',
-                            `an`        = '".((int)$user)."',
-                            `titel`     = '".up($title)."',
-                            `nachricht` = '".up($msg, 1)."'");
-                
-                    $index = info(_add_buddy_successful, "?action=buddys");
-                }
-            break;
-            case 'delete':
-                db("DELETE FROM ".$db['buddys']." WHERE buddy = ".intval($_GET['id'])." AND user = '".$userid."'");
-                
-                $msg = show(_buddy_del_msg, array("user" => addslashes(autor($userid))));
-                $title = _buddy_title;
-                
-                db("INSERT INTO ".$db['msg']."
+    if($_GET['do'] == "add")
+    {
+        if($_POST['users'] == "-")
+          {
+              $index = error(_error_select_buddy, 1);
+          } elseif($_POST['users'] == $userid) {
+              $index = error(_error_buddy_self, 1);
+          } elseif(!check_buddy($_POST['users'])) {
+              $index = error(_error_buddy_already_in, 1);
+          } else {
+              $qry = db("INSERT INTO ".$db['buddys']."
+                             SET `user`   = '".((int)$userid)."',
+                       `buddy`  = '".((int)$_POST['users'])."'");
+
+        $msg = show(_buddy_added_msg, array("user" => autor($userid)));
+        $title = _buddy_title;
+
+        $send = db("INSERT INTO ".$db['msg']."
                     SET `datum`     = '".((int)time())."',
                         `von`       = '0',
-                        `an`        = '".((int)$_GET['id'])."',
+                        `an`        = '".((int)$_POST['users'])."',
                         `titel`     = '".up($title)."',
                         `nachricht` = '".up($msg, 1)."'");
-                
-                $index = info(_buddys_delete_successful, "../user/?action=buddys");
-            break;
-        }
+
+              $index = info(_add_buddy_successful, "?action=buddys");
+          }
+    } elseif($_GET['do'] == "addbuddy") {
+      if(isset($_GET['id'])) $user = $_GET['id'];
+      else $user = $_POST['users'];
+
+        if($user == "-")
+          {
+              $index = error(_error_select_buddy, 1);
+          } elseif($user == $userid) {
+              $index = error(_error_buddy_self, 1);
+          } elseif(!check_buddy($user)) {
+              $index = error(_error_buddy_already_in, 1);
+          } else {
+              $qry = db("INSERT INTO ".$db['buddys']."
+                           SET `user`   = '".((int)$userid)."',
+                       `buddy`  = '".((int)$user)."'");
+
+        $msg = show(_buddy_added_msg, array("user" => addslashes(autor($userid))));
+        $title = _buddy_title;
+
+        $send = db("INSERT INTO ".$db['msg']."
+                    SET `datum`     = '".((int)time())."',
+                        `von`       = '0',
+                        `an`        = '".((int)$user)."',
+                        `titel`     = '".up($title)."',
+                        `nachricht` = '".up($msg, 1)."'");
+
+              $index = info(_add_buddy_successful, "?action=buddys");
+          }
+    } elseif($_GET['do'] == "delete") {
+          $qry = db("DELETE FROM ".$db['buddys']."
+                               WHERE buddy = ".intval($_GET['id'])."
+                 AND user = '".$userid."'");
+
+      $msg = show(_buddy_del_msg, array("user" => addslashes(autor($userid))));
+      $title = _buddy_title;
+
+      $send = db("INSERT INTO ".$db['msg']."
+                  SET `datum`     = '".((int)time())."',
+                      `von`       = '0',
+                      `an`        = '".((int)$_GET['id'])."',
+                      `titel`     = '".up($title)."',
+                      `nachricht` = '".up($msg, 1)."'");
+
+          $index = info(_buddys_delete_successful, "../user/?action=buddys");
+      }
   }
 break;
 case 'language';
@@ -2538,7 +2713,6 @@ case 'language';
 break;
 case 'switch';
   $index = set_cookie($prev.'tmpdir',$_GET['set']);
-
   header("Location: ".$_SERVER['HTTP_REFERER']);
 break;
 case 'admin';
@@ -2591,7 +2765,6 @@ case 'admin';
                                             "squad" => _member_admin_squad,
                                             "posi" => _profil_position,
                                             "deletesq" => $deletesq));
-    
   } elseif(data($_GET['edit'], "level") == 4 && $userid != $rootAdmin) {
     $index = error(_error_edit_admin, 1);
   } else {
@@ -2605,21 +2778,25 @@ case 'admin';
         $index = info($msg, "?action=user&amp;id=".$_GET['id']."");
 
         set_cookie($prev.'id','');
-        set_cookie($prev.'pwd','');
+        set_cookie($prev.'pkey',"");
 
         @session_regenerate_id();
 
         $_SESSION['id'] = $_GET['id'];
         $_SESSION['pwd'] = data($_GET['id'], "pwd");
-		$_SESSION['ip'] = $userip;
+        $_SESSION['ip'] = $userip;
 
         $qry = db("UPDATE ".$db['users']."
-		    					 SET `online` = '1',
+                                 SET `online` = '1',
                        `sessid` = '".session_id()."',
-                       `ip`     = '".visitorIp()."'
-							    WHERE id = ".intval($_GET['id']));
+                       `ip`     = '".$userip."'
+                                WHERE id = ".intval($_GET['id']));
 
-        wire_ipcheck("ident(".$userid."_".intval($_GET['id']).")");
+        $protocol = "ident(".$userid."_".intval($_GET['id']).")";
+        $upd = db("INSERT INTO ".$db['ipcheck']."
+                   SET `ip`   = '".$userip."',
+                       `what` = '".$protocol."',
+                       `time` = '".((int)time())."'");
       }
     } elseif($_GET['do'] == "update") {
       if($_POST)
@@ -2634,7 +2811,7 @@ case 'admin';
             db("INSERT INTO ".$db['permissions']." SET `user` = '".intval($_GET['user'])."'".$p);
           }
     ////////////////////
-    
+
     // internal boardpermissions
           db("DELETE FROM ".$db['f_access']." WHERE `user` = '".intval($_GET['user'])."'");
           if(!empty($_POST['board']))
@@ -2643,7 +2820,7 @@ case 'admin';
               db("INSERT INTO ".$db['f_access']." SET `user` = '".intval($_GET['user'])."', `forum` = '".$v."'");
           }
     ////////////////////
-    
+
         $del = db("DELETE FROM ".$db['squaduser']."
                    WHERE user = '".intval($_GET['user'])."'");
         $del = db("DELETE FROM ".$db['userpos']."
@@ -2658,7 +2835,7 @@ case 'admin';
                        SET `user`   = '".((int)$_GET['user'])."',
                            `squad`  = '".((int)$_POST['squad'.$getsq['id']])."'");
           }
-          
+
           if(isset($_POST['squad'.$getsq['id']]))
           {
             $qry = db("INSERT INTO ".$db['userpos']."
@@ -2679,7 +2856,11 @@ case 'admin';
                        `level`  = '".((int)$_POST['level'])."'
                    WHERE id = '".intval($_GET['user'])."'");
 
-        wire_ipcheck("upduser(".$userid."_".intval($_GET['user']).")");
+        $protocol = "upduser(".$userid."_".intval($_GET['user']).")";
+        $upd = db("INSERT INTO ".$db['ipcheck']."
+                   SET `ip`   = '".$userip."',
+                       `what` = '".$protocol."',
+                       `time` = '".((int)time())."'");
       }
       $index = info(_admin_user_edited, "?action=userlist");
     } elseif($_GET['do'] == "updateme") {
@@ -2718,8 +2899,11 @@ case 'admin';
         {
           $index = error(_user_cant_delete_admin, 2);
         } else {
-			
-          wire_ipcheck("deluser(".$userid."_".intval($_GET['id']).")");
+          $protocol = "deluser(".$userid."_".intval($_GET['id']).")";
+          $upd = db("INSERT INTO ".$db['ipcheck']."
+                     SET `ip`   = '".$userip."',
+                         `what` = '".$protocol."',
+                         `time` = '".((int)time())."'");
 
           $upd = db("UPDATE ".$db['f_posts']."
                      SET `reg` = 0
@@ -2784,10 +2968,12 @@ case 'admin';
         elseif($get['level'] == 3) $selm = "selected=\"selected\"";
         elseif($get['level'] == 4) $sela = "selected=\"selected\"";
 
-        $qrysq = db("SELECT id,name FROM ".$db['squads']." ORDER BY pos");
+        $qrysq = db("SELECT id,name FROM ".$db['squads']."
+                     ORDER BY pos");
         while($getsq = _fetch($qrysq))
         {
-          $qrypos = db("SELECT id,position FROM ".$db['pos']." ORDER BY pid");
+          $qrypos = db("SELECT id,position FROM ".$db['pos']."
+                        ORDER BY pid");
           $posi = "";
           while($getpos = _fetch($qrypos))
           {
@@ -2821,22 +3007,22 @@ case 'admin';
         $editpwd = show($dir."/admin_editpwd", array("pwd" => _new_pwd,
                                                      "epwd" => ""));
 
-				if($chkMe == 4)	$elevel = show(_elevel_admin_select, array("selu" => $selu,
-																																	 "selt" => $selt,
-																																	 "selm" => $selm,
-																																	 "sela" => $sela,
-																																	 "ruser" => _status_user,
-																																	 "banned" => _admin_level_banned,
-																																	 "trial" => _status_trial,
-																																	 "member" => _status_member,
-																																	 "admin" => _status_admin));
-				elseif(permission("editusers"))  $elevel = show(_elevel_perm_select, array("selu" => $selu,
-																																									 "selt" => $selt,
-																																									 "selm" => $selm,
-																																									 "ruser" => _status_user,
-																																									 "banned" => _admin_level_banned,
-																																									 "trial" => _status_trial,
-																																									 "member" => _status_member));
+                if($chkMe == 4)	$elevel = show(_elevel_admin_select, array("selu" => $selu,
+                                                                                                                                     "selt" => $selt,
+                                                                                                                                     "selm" => $selm,
+                                                                                                                                     "sela" => $sela,
+                                                                                                                                     "ruser" => _status_user,
+                                                                                                                                     "banned" => _admin_level_banned,
+                                                                                                                                     "trial" => _status_trial,
+                                                                                                                                     "member" => _status_member,
+                                                                                                                                     "admin" => _status_admin));
+                elseif(permission("editusers"))  $elevel = show(_elevel_perm_select, array("selu" => $selu,
+                                                                                                                                                                     "selt" => $selt,
+                                                                                                                                                                     "selm" => $selm,
+                                                                                                                                                                     "ruser" => _status_user,
+                                                                                                                                                                     "banned" => _admin_level_banned,
+                                                                                                                                                                     "trial" => _status_trial,
+                                                                                                                                                                     "member" => _status_member));
 
         $index = show($dir."/admin", array("enick" => re($get['nick']),
                                            "user" => intval($_GET['edit']),
@@ -2856,13 +3042,13 @@ case 'admin';
                                            "clankasse" => _user_list_ck,
                                            "auth_info" => _admin_user_clanhead_info,
                                            "alvl" => $get['level'],
-																					 "elevel" => $elevel,
+                                                                                     "elevel" => $elevel,
                                            "level_info" => _level_info,
                                            "gallery" => _admin_user_gallery,
                                            "yes" => _yes,
                                            "no" => _no,
                                            "cw_info" => _cw_info,
-                                           
+
                                            "edithead" => _admin_user_edithead,
                                            "personalhead" => _admin_user_personalhead,
                                            "squadhead" => _admin_user_squadhead,

@@ -36,7 +36,7 @@ default:
                 ' ORDER BY id');
     $results = '';
     $check = '';
-    $stimmen = 0;
+    $stimmen = sum($db['vote_results']," WHERE vid = '".$get['id']."'","stimmen");
     $vid = 'vid_' . (int) $get['id'];
     if($get['intern'] == 1) {
       $showVoted = '';
@@ -52,7 +52,6 @@ default:
       }
     $hostIpcheck = ipcheck($vid);
     while($getv = _fetch($qryv)) {
-      $stimmen += $getv['stimmen'];
       $class = ($color % 2) ? "contentMainSecond" : "contentMainFirst"; $color++; 
       if($hostIpcheck || $ipcheck || isset($_COOKIE[$prev."vid_".$get['id']]) || $get['closed'] == 1) {
         $percent = @round($getv['stimmen']/$stimmen*100,2);
@@ -161,12 +160,17 @@ case 'do';
     {
       $index = error(_vote_no_answer);
     } else {
-      $get = db("SELECT * FROM ".$db['votes']." WHERE id = '".intval($_GET['id'])."'",false,true);
+      $qry = db("SELECT * FROM ".$db['votes']."
+                 WHERE id = '".intval($_GET['id'])."'");
+      $get = _fetch($qry);
   
       if($get['intern'] == 1)
       {
         $vid = "vid_".$_GET['id'];
-        $ipcheck = db("SELECT * FROM ".$db['ipcheck']." WHERE what = '".$vid."'",false,true);
+        $check = db("SELECT * FROM ".$db['ipcheck']."
+                     WHERE what = '".$vid."' ");
+        $ipcheck = _fetch($check);
+  
         if($ipcheck['ip'] == $userid)
         {
           $index = error(_error_voted_again,1);
@@ -182,8 +186,16 @@ case 'do';
                      SET `stimmen` = stimmen+1
                      WHERE id = '".intval($_POST['vote'])."'");
   
-          wire_ipcheck($vid);
-          wire_ipcheck("vid(".$_GET['id'].")");
+          $qry = db("INSERT INTO ".$db['ipcheck']."
+                     SET `ip`   = '".$userid."',
+                         `what` = '".$vid."',
+                         `time` = '".time()."'");
+          
+          $vid2 = "vid(".$_GET['id'].")";
+          $ins2 = db("INSERT INTO ".$db['ipcheck']."
+                      SET `ip`   = '".$userip."',
+                          `what` = '".$vid2."',
+                          `time` = '".time()."'");
                           
           if(!isset($_GET['ajax'])) $index = info(_vote_successful, "?action=show&amp;id=".$_GET['id']."");
         }
@@ -199,15 +211,23 @@ case 'do';
                           WHERE user = '".$userid."'");
           } else $time = "0";
   
-           db("UPDATE ".$db['vote_results']."
+          $qry = db("UPDATE ".$db['vote_results']."
                      SET `stimmen` = stimmen+1
                      WHERE id = '".intval($_POST['vote'])."'");
 
-          wire_ipcheck("vid_".$_GET['id']);
-          wire_ipcheck("vid(".$_GET['id'].")");
+          $vid = "vid_".$_GET['id']."";
+          $ins = db("INSERT INTO ".$db['ipcheck']."
+                     SET `ip`   = '".$userip."',
+                         `what` = '".$vid."',
+                         `time` = '".time()."'");
+                         
+          $vid2 = "vid(".$_GET['id'].")";
+          $ins2 = db("INSERT INTO ".$db['ipcheck']."
+                      SET `ip`   = '".$userip."',
+                          `what` = '".$vid2."',
+                          `time` = '".time()."'");
 
-          if(!isset($_GET['ajax'])) 
-			$index = info(_vote_successful, "?action=show&amp;id=".$_GET['id']."");
+          if(!isset($_GET['ajax'])) $index = info(_vote_successful, "?action=show&amp;id=".$_GET['id']."");
         }
         if(isset($userid)) $cookie = $userid;
         else $cookie = "voted";
@@ -249,8 +269,17 @@ case 'do';
                    SET `stimmen` = stimmen+1
                    WHERE id = '".intval($_POST['vote'])."'");
 
-		wire_ipcheck("vid_".$_GET['id']);
-        wire_ipcheck("vid(".$_GET['id'].")");
+        $vid = "vid_".$_GET['id']."";
+        $ins = db("INSERT INTO ".$db['ipcheck']."
+                   SET `ip`   = '".$userip."',
+                       `what` = '".$vid."',
+                       `time` = '".time()."'");
+                       
+        $vid2 = "vid(".$_GET['id'].")";
+        $ins2 = db("INSERT INTO ".$db['ipcheck']."
+                    SET `ip`   = '".$userip."',
+                        `what` = '".$vid2."',
+                        `time` = '".time()."'");
 
         if(!isset($_GET['fajax'])) $index = info(_vote_successful, "forum/?action=showthread&amp;kid=".$_POST['kid']."&amp;id=".$_POST['fid']."");
       }
@@ -267,6 +296,7 @@ case 'do';
     echo fvote($_GET['id'], 1);
     exit;
   }  
+
 
 break;
 endswitch;

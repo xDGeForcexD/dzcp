@@ -1,7 +1,21 @@
 <?php
 ob_start();
-define('basePath', '../../../../');
-require_once(basePath.'/inc/kernel.php');
+function get_files($dir)
+{
+  $dp = @opendir($dir);
+  $files = array();
+  while($file = @readdir($dp))
+  {
+    if($file != '.' && $file != '..' && $file != 'custom')
+    {
+      array_push($files, $file);
+    }
+  }
+  @closedir($dp);
+  sort($files);
+
+  return($files);
+}
 ?>
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -33,7 +47,7 @@ require_once(basePath.'/inc/kernel.php');
 	<div align="center">
 		<table id="smileys" border="0" cellspacing="0" cellpadding="1">
 <?php
-    $files = get_files(basePath.'/inc/images/smileys',false,true,$picformat);
+    $files = get_files('../../../images/smileys');
 
     $t=1;
     $b=0;
@@ -44,7 +58,7 @@ require_once(basePath.'/inc/kernel.php');
       $tr1 = "";
       $tr2 = "";
       
-      $constraints = getimagesize(basePath.'/inc/images/smileys/'.$files[$i]);
+      $constraints = getimagesize('../../../images/smileys/'.$files[$i]);
       $x = $constraints[0]+6;
       $y = $constraints[1]+15;
       

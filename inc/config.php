@@ -4,31 +4,50 @@ require_once(basePath."/inc/mysql.php");
 
 //DZCP-Install default variable
 if(!isset($installation))
-    $installation = false;
+$installation = false;
 
-//DZCP Settings
-define('is_debug', false);
-define('buffer_gzip_compress', true);
-define('buffer_gzip_compress_level', 4);
+function show($tpl="", $array=array(), $array_lang_constant=array(), $array_block=array())
+{
+    global $tmpdir;
+    if(!empty($tpl) && $tpl != null)
+    {
+        $template = basePath."/inc/_templates_/".$tmpdir."/".$tpl;
+        $array['dir'] = '../inc/_templates_/'.$tmpdir;
 
-define('dzcp_newsticker', true);
-define('dzcp_newsticker_refresh', (15*60));
+        if(file_exists($template.".html"))
+            $tpl = file_get_contents($template.".html");
 
-define('dzcp_version_checker', true);
-define('dzcp_version_checker_refresh', (30*60));
+        //put placeholders in array
+        $pholder = explode("^",pholderreplace($tpl));
+        for($i=0;$i<=count($pholder)-1;$i++)
+        {
+            if(in_array($pholder[$i],$array_block))
+                continue;
 
-define('cache_gzip_compress', true);
-define('cache_gzip_compress_level', 2);
+            if(array_key_exists($pholder[$i],$array))
+                continue;
 
-define('xfire_preloader', true);
-define('xfire_skin', 'shadow'); //shadow,kampf,scifi,fantasy,wow,default
-define('xfire_refresh', (10*60));
+            if(!strstr($pholder[$i], 'lang_'))
+                continue;
 
-$picformat = array("jpg", "gif", "png");
-$passwordComponents = array("ABCDEFGHIJKLMNOPQRSTUVWXYZ","abcdefghijklmnopqrstuvwxyz","0123456789","#$@!");
+            if(defined(substr($pholder[$i], 4)))
+                $array[$pholder[$i]] = (count($array_lang_constant) >= 1 ? show(constant(substr($pholder[$i], 4)),$array_lang_constant) : constant(substr($pholder[$i], 4)));
+        }
+
+        unset($pholder);
+
+        if(count($array) >= 1)
+        {
+            foreach($array as $value => $code)
+            { $tpl = str_replace('['.$value.']', $code, $tpl); }
+        }
+    }
+
+    return $tpl;
+}
 
 //-> MySQL-Datenbankangaben
-$prefix = $sql_prefix;                      
+$prefix = $sql_prefix;
 $db = array("host" =>           $sql_host,
             "user" =>           $sql_user,
             "pass" =>           $sql_pass,
@@ -36,7 +55,7 @@ $db = array("host" =>           $sql_host,
             "artikel" =>        $prefix."artikel",
             "acomments" =>      $prefix."acomments",
             "awards" =>         $prefix."awards",
-      		"away" =>           $prefix."away",
+              "away" =>           $prefix."away",
             "banned" =>         $prefix."banned",
             "buddys" =>         $prefix."userbuddys",
             "ipcheck" =>        $prefix."ipcheck",
@@ -54,7 +73,7 @@ $db = array("host" =>           $sql_host,
             "dl_kat" =>         $prefix."download_kat",
             "events" =>         $prefix."events",
             "f_access" =>       $prefix."f_access",
-      		"f_abo" =>          $prefix."f_abo",
+              "f_abo" =>          $prefix."f_abo",
             "f_kats" =>         $prefix."forumkats",
             "f_posts" =>        $prefix."forumposts",
             "f_skats" =>        $prefix."forumsubkats",
@@ -84,15 +103,29 @@ $db = array("host" =>           $sql_host,
             "squads" =>         $prefix."squads",
             "squaduser" =>      $prefix."squaduser",
             "sponsoren" =>      $prefix."sponsoren",
+            "slideshow" =>      $prefix."slideshow",
             "taktik" =>         $prefix."taktiken",
-            "users" =>          $prefix."users", 
+            "users" =>          $prefix."users",
             "usergallery" =>    $prefix."usergallery",
             "usergb" =>         $prefix."usergb",
-            "userpos" =>        $prefix."userposis",    
+            "userpos" =>        $prefix."userposis",
             "userstats" =>      $prefix."userstats",
-            "versions" =>       $prefix."versions",
             "votes" =>          $prefix."votes",
-            "vote_results" =>   $prefix."vote_results",
-            'mods' =>           $prefix.'mods'
-            );
+            "vote_results" =>   $prefix."vote_results");
+
+if($db['host'] != '' && $db['user'] != '' && $db['pass'] != '' && $db['db'] != '')
+{
+    if(!$msql = mysql_connect($db['host'],$db['user'],$db['pass'])) die("<b>Fehler beim Zugriff auf die Datenbank!");
+    if(!mysql_select_db($db['db'],$msql)) die("<b>Die angegebene Datenbank <i>".$db['db']."</i> existiert nicht!");
+}
+
+function db($db)
+{
+  global $prefix;
+  if(!$qry = mysql_query($db)) die('<b>MySQL-Query failed:</b><br /><br /><ul>'.
+                                   '<li><b>ErrorNo</b> = '.str_replace($prefix,'',mysql_errno()).
+                                   '<li><b>Error</b>   = '.str_replace($prefix,'',mysql_error()).
+                                   '<li><b>Query</b>   = '.str_replace($prefix,'',$db).'</ul>');
+  return $qry;
+}
 ?>

@@ -1,43 +1,64 @@
 <?php
-## Charset ##
-define('_charset', 'iso-8859-1');
+$charset = 'iso-8859-1';
+header("Content-type: text/html; charset=".$charset);
 
-## ADDED FOR 1.6 Final
-define('_config_version', 'Mod/AddOns manager');
-define('_v_head', 'Mod/AddOn version manager');
-define('_v_name', 'Mod/AddOn name');
-define('_v_own', 'own version');
-define('_v_server', 'latest version');
-define('_config_v_add', 'add Mod/AddOn');
-define('_v_server_hover', 'Check version on');
-define('_v_unknown', 'unknown');
-define('_v_fsockopen_not_allowed', 'fsockopen not allowed');
-define('_v_no_data', 'no data requested');
-define('_v_get_data', 'request data');
-define('_v_server_id', 'Mod/AddOn ID on server');
-define('_v_download_link', 'Mod/AddOn download link');
-define('_v_added', 'Mod/AddOn added');
-define('_v_edited', 'Mod/AddOn successfully added');
-define('_confirm_del_version', 'It only removes the entry from this list, delete?');
-define('_v_no_server', 'no control server');
 
-define('_search_con_or', 'at least one word');
-define('_search_con_and', 'character by character');
-define('_search_con_andb', 'every word');
-define('_search_website','remaining website');
-define('_search_for_area_forum','board-searcharea');
+## ADDED / REDEFINED FOR 1.6 Final
+define(_txt_navi_main, 'Main Navigation');
+define(_txt_navi_clan, 'Clan Navigation');
+define(_txt_navi_server, 'Server Navigation');
+define(_txt_navi_misc, 'Misc Navigation');
+define(_txt_userarea, 'Userarea');
+define(_txt_vote, 'Vote');
+define(_txt_partners, 'Partners');
+define(_txt_sponsors, 'Sponsors');
+define(_txt_counter, 'Counter');
+define(_txt_l_news, 'News');
+define(_txt_ftopics, 'Topics');
+define(_txt_l_wars, 'Last Wars');
+define(_txt_n_wars, 'Next Wars');
+define(_txt_teams, 'Teams');
+define(_txt_gallerie, 'Our Gallerys');
+define(_txt_top_match, 'Top Match');
+define(_txt_shout, 'Shoutbox');
+define(_txt_template_switch, 'Switch Template');
+define(_txt_events, 'Events');
+define(_txt_kalender, 'Calendar');
+define(_txt_l_artikel, 'Articles');
+define(_txt_l_reg, 'new Users');
+define(_txt_motm, 'Member of the Moment');
+define(_txt_random_gallery, 'random Gallerypic');
+define(_txt_server, 'Server');
+define(_txt_teamspeak, 'Teamspeak');
+define(_txt_top_dl, 'Top Downloads');
+define(_txt_uotm, 'User of the Moment');
 
-define("_dzcp_vcheck", 'The DZCP Version Checker will inform about new DZCP updates and shows you whether DZCP.de is online to compare your version with the current.<br><br><span class=fontBold>Description:</span><br><font color=#17D427>Gr&uuml;n:</font> Successfully connected to DZCP.de, Up to Date!<br><font color=#FFFF00>Gelb:</font> Could not connect to DZCP.de</br><font color=#FF0000>Rot:</font>A new update available!');
-define("_debug_on", 'Debug mode is enabled!');
-
-## Navigation / Server ##
-define('_navi_gsv_players_online', 'Online');
-define('_navi_gsv_on_the_game', 'Players');
-define('_navi_gsv_view_players', 'View Players');
-define('_navi_gsv_game', 'Game');
-define('_navi_gsv_no_name_available', 'no Name available');      
-define('_navi_gsv_no_players_available', 'no Players online');
-define('_navi_gsv_password', 'Password');
+define(_gal_pics, 'Pics in Gallery');
+define(_config_slideshow, 'Slideshow');
+define(_perm_slideshow, 'Manage Slideshow Pics');
+define(_slider, 'Slideshow');
+define(_slider_admin_add, 'Add new Slideshowpicture');
+define(_slider_admin_add_done, 'Slideshowpicture successfully added');
+define(_slider_admin_del, 'Realy Delete this Slideshowpicture?');
+define(_slider_admin_del_done, 'Slideshowpicture successfully deleted');
+define(_slider_admin_edit, 'edit Slideshowpicture');
+define(_slider_admin_edit_done, 'Slideshowpicture successfully edited!');
+define(_slider_admin_error_empty_bezeichnung, 'you have to enter a title');
+define(_slider_admin_error_empty_url, 'you have to enter a link');
+define(_slider_admin_error_nopic, 'You have to upload a picture');
+define(_slider_bezeichnung, 'Title');
+define(_slider_new_window, 'new Window?');
+define(_slider_pic, 'Picture');
+define(_slider_desc, 'Description');
+define(_slider_position, 'Position');
+define(_slider_position_first, 'first');
+define(_slider_position_lazy, '<option value="lazy">- no change -</option>');
+define(_slider_url, 'URL');
+define(_slider_show_title, 'Show title');
+define(_news_userimage, 'Own Newspicture');
+define(_newspic_del, 'delete Newspicture?');
+define(_newspic_deleted, 'Newspicture deleted successfully');
+define('_max', 'max.');
 
 ## ADDED / REDEFINED FOR 1.5 Final
 define('_side_membermap', 'Membermap');
@@ -93,7 +114,7 @@ define('_config_double_post' , 'Forum double post');
 define('_config_fotum_vote' , 'Forum-Vote');
 define('_config_fotum_vote_info' , '<center>Here you can specify whether a Forum-Vote also Vote to be displayed.</center>');
 ## ADDED / REDEFINED FOR 1.5
-define('_installdir' , "<tr><td colspan=\"15\" class=\"contentMainFirst\"><br /><center>In case of security reasons, please remove the folder \"<b>/_installer</b>\" from your webserver!</center><br /></td></tr>");
+define('_installdir' , "<tr><td colspan=\"15\" class=\"contentMainFirst\"><br /><center>In case of security reasons, please remove the folder \"<b>/_installer</b>\" from your webserver! Only then the admin menu available!</center><br /></td></tr>");
 define('_no_ts' , 'no Teamspeak');
 define('_search_sites' , 'Sites');
 define('_search_results' , 'Search Results');
@@ -240,14 +261,14 @@ define('_msg_sendnews_user' , '
       <input type="hidden" name="action" value="msg" />
       <input type="hidden" name="do" value="sendnewsdone" />
       <input type="hidden" name="id" value="[id]" />
-	  <input type="hidden" name="datum" value="[datum]" />
+      <input type="hidden" name="datum" value="[datum]" />
       <input id="contentSubmit" type="submit" class="submit" value="Submit" />
     </form>
   </td>
 </tr>');
 define('_msg_sendnews_done' , '
 <tr>
-  <td align="center" class="contentMainTop"><span class="fontRed">	
+  <td align="center" class="contentMainTop"><span class="fontRed">
 This news is / was made from the [user] edited!!!</span></td>
 </tr>');
 define('_send_news_done' , 'Thank you for your news!');
@@ -395,6 +416,8 @@ define('_glossar_erkl' , 'Explanation');
 define('_admin_support_head' , 'Support informations');
 define('_admin_support_info' , 'The following informations are very helpful if you ask a support-question in the board of <a href="http://www.dzcp.de" target="_blank">www.dzcp.de</a>.');
 define('_config_support' , 'Supportinformations');
+define('_search_con_or' , 'OR-Operation');
+define('_search_con_and' , 'AND-Operation');
 define('_search_head' , 'Search');
 define('_search_word' , 'Search in...');
 define('_search_forum_all' , 'Search in all boards');
@@ -558,7 +581,7 @@ define('_welcome_guest' , ' <img src="../inc/images/flaggen/nocountry.gif" alt="
 define('_online_head' , 'User online');
 define('_online_whereami' , 'Area');
 define('_back' , '<a href="javascript: history.go(-1)" class="files">back</a>');
-define('_contact_text_fightus' , '	
+define('_contact_text_fightus' , '
 Someone filled out the fightus contactform!<br />
 Each clanwar admin received this message!<br /><br />
 <span class="fontBold">Team:</span> [squad]<br /><br />
@@ -1421,7 +1444,7 @@ define('_user_delete_verify' , '
 <tr>
   <td class="contentMainFirst" align="center">
     Are you sure to delete the user [user]?<br />
-    <span class="fontUnder">Every</span> activities from this user will be deleted, too!<br /><br /> 
+    <span class="fontUnder">Every</span> activities from this user will be deleted, too!<br /><br />
     <a href="?action=admin&amp;do=delete&verify=yes&amp;id=[id]">Yes, delete [user]!</a>
   </td>
 </tr>');
@@ -1579,7 +1602,7 @@ or partly or completely deleted by the author without separate announcement.
 <br /><br />
 <h2><span class="fontBold">2. Referrals and links</span></h2>
 <br />
-The author is not responsible for any contents linked or referred to from his pages - unless he has full knowledge of illegal contents and would be able to prevent the visitors of his site fromviewing those pages. 
+The author is not responsible for any contents linked or referred to from his pages - unless he has full knowledge of illegal contents and would be able to prevent the visitors of his site fromviewing those pages.
 If any damage occurs by the use of information presented there, only the author of the respective pages might be liable, not the one who has linked to these pages. Furthermore the author is not liable for any postings or messages published by users of discussion boards, guestbooks or mailinglists provided on his page.
 <br /><br />
 <h2><span class="fontBold">3. Copyright</span></h2>
@@ -1587,7 +1610,7 @@ If any damage occurs by the use of information presented there, only the author 
 The author intended not to use any copyrighted material for the publication or, if not possible, to indicate the copyright of the respective object.
 <br />
 The copyright for any material created by the author is reserved. Any duplication or use of objects such as images, diagrams, sounds or texts in other
-electronic or printed publications is not permitted without the author\'s agreement. 
+electronic or printed publications is not permitted without the author\'s agreement.
 <br /><br />
 <h2><span class="fontBold">4. Privacy policy<</span></h2>
 <br />
@@ -1698,7 +1721,7 @@ define('_dl_admin_added' , 'The download category was successfully registered!')
 define('_dl_admin_deleted' , 'The download category was successfully deleted!');
 define('_dl_edit_head' , 'Edit download category');
 define('_dl_admin_edited' , 'The download category was successfully edited!');
-define('_config_global_head' , 'Configurationn');
+define('_config_global_head' , 'Configuration');
 define('_config_c_limits' , 'Limits');
 define('_config_c_limits_what' , 'Here you can adjust the amount of entrys which will be maximum shown');
 define('_config_c_usergb' , 'User guestbook');
@@ -2064,8 +2087,8 @@ define('_info' , 'Info');
 define('_error' , 'Error');
 define('_datum' , 'Date');
 define('_legende' , 'Legend');
-define('_xfire_name', 'Xfire Name');
-define('_xfire', 'Xfire');
+define('_hlswid' , 'XFire Name');
+define('_hlswstatus' , 'XFire');
 define('_steamid' , 'Steam-ID');
 define('_link' , 'Link');
 define('_linkname' , 'Linkname');

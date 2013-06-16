@@ -313,11 +313,14 @@ case 'show';
 													 `hp`       = '".links($_POST['hp'])."',
 													 `reg`      = '".((int)$userid)."',
 													 `comment`  = '".up($_POST['comment'],1)."',
-													 `ip`       = '".visitorIp()."'");
+													 `ip`       = '".$userip."'");
 		
+						$ncid = "artid(".$_GET['id'].")";
+						$qry = db("INSERT INTO ".$db['ipcheck']."
+											 SET ip   = '".$userip."',
+													 what = '".$ncid."',
+													 time = '".((int)time())."'");
 		
-                        wire_ipcheck("artid(".$_GET['id'].")");
-						
 						$index = info(_comment_added, "?action=show&amp;id=".$_GET['id']."");
 					}
 				} else {
@@ -534,7 +537,7 @@ case 'compreview';
                                             "avatar" => useravatar($get_userid),
                                             "onoff" => $onoff,
                                             "rank" => getrank($get_userid),
-                                            "ip" => visitorIp()._only_for_admins));
+                                            "ip" => $userip._only_for_admins));
     
   echo '<table class="mainContent" cellspacing="1">'.$index.'</table>';
 exit;
