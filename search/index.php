@@ -34,15 +34,8 @@ default:
       $strkat .= $key.'|';
   }      
 
-  if(permission("intforum"))
-  {
-    $qry = db("SELECT * FROM ".$db['f_kats']."
+  $qry = db("SELECT * FROM ".$db['f_kats']."
                ORDER BY kid");
-  } else {
-    $qry = db("SELECT * FROM ".$db['f_kats']."
-               WHERE intern = 0
-               ORDER BY kid");
-  }
   while($get = _fetch($qry))
   {
     $fkats .= '<li><label class="searchKat" style="text-align:center">'.re($get['name']).'</label></li>';
@@ -53,10 +46,7 @@ default:
                 ORDER BY kattopic");
     while($gets = _fetch($qrys))
     {
-      $intF = db("SELECT * FROM ".$db['f_access']."
-                  WHERE user = '".$_SESSION['id']."'
-                  AND forum = '".$gets['id']."'");
-      if($get['intern'] == 0 || (($get['intern'] == 1 && _rows($intF)) || $chkMe == 4))
+      if(fintern($gets['id'])) 
       {
         if(preg_match("#k_".$gets['id']."\|#",$strkat)) $kcheck = "checked=\"checked\"";
         else  $kcheck = '';
@@ -164,9 +154,6 @@ default:
         }
         $dosearch .= ')';
       }
-      
-      $dosearch = (!permission("intforum")) ? 'AND s4.intern = 0' : 'AND s4.intern = 1';
-
       $qry = db("SELECT s1.id,s1.topic,s1.kid,s1.t_reg,s1.t_email,s1.t_nick,s1.hits,s4.intern,s3.id AS subid
                  FROM ".$db['f_threads']." AS s1
                  LEFT JOIN ".$db['f_posts']." AS s2
@@ -195,11 +182,8 @@ default:
   
         while($get = _fetch($qry))
         {
-          $intF = db("SELECT * FROM ".$db['f_access']."
-                      WHERE user = '".$_SESSION['id']."'
-                      AND forum = '".$get['subid']."'");
-          if(($get['intern'] == 1 && !_rows($intF) && $chkMe != 4)) $entrys--;
-          if($get['intern'] == 0 || (($get['intern'] == 1 && _rows($intF)) || $chkMe == 4))
+          if(!fintern($get['subid'])) $entrys--;
+          if(fintern($get['subid']))
           {
             if($get['sticky'] == 1) $sticky = _forum_sticky;
             else $sticky = "";
