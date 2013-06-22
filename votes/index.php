@@ -25,7 +25,7 @@ default:
   }
   $fvote = '';
   if($forum_vote == 0) {
-    $fvote = empty($whereIntern) ? 'WHERE forum = 0' : ' AND forum = 0';
+    $fvote = empty($whereIntern) ? ' WHERE forum = 0' : ' AND forum = 0';
   }
   $qry = db('SELECT * FROM ' . $db['votes'] . 
             $whereIntern . $fvote . ' ORDER BY ' . $orderIntern .
