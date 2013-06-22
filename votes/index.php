@@ -16,16 +16,16 @@ else $action = $_GET['action'];
 
 switch ($action):
 default:
-  $fvote = '';
-  if($forum_vote == 0) {
-    $fvote = ' AND forum = 0 ';
-  }
   if(!permission('votes')) {
     $whereIntern = ' WHERE intern = 0 ';
     $orderIntern = '';
   } else {
     $whereIntern = '';
     $orderIntern = ' intern DESC,';
+  }
+  $fvote = '';
+  if($forum_vote == 0) {
+    $fvote = empty($whereIntern) ? 'WHERE forum = 0' : ' AND forum = 0';
   }
   $qry = db('SELECT * FROM ' . $db['votes'] . 
             $whereIntern . $fvote . ' ORDER BY ' . $orderIntern .
