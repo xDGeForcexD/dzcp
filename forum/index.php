@@ -1074,9 +1074,9 @@ case 'thread';
           $topic = db("SELECT topic FROM ".$db['f_threads']." WHERE id = '".intval($_GET['id'])."'");
           $gettopic = _fetch($topic);
 
-          $subj = show(re(settings('eml_fabo_tedit_subj')), array("titel" => $title));
+          $subj = show(bbcode_mail(settings('eml_fabo_tedit_subj')), array("titel" => $title));
 
-           $message = show(re(settings('eml_fabo_tedit')), array("nick" => re($getabo['nick']),
+           $message = show(bbcode_mail(settings('eml_fabo_tedit')), array("nick" => re($getabo['nick']),
                                                                 "postuser" => fabo_autor($userid),
                                                             "topic" => $gettopic['topic'],
                                                             "titel" => $title,
@@ -1565,9 +1565,9 @@ case 'post';
             if($entrys == "0") $pagenr = "1";
             else $pagenr = ceil($entrys/$maxfposts);
 
-          $subj = show(re(settings('eml_fabo_pedit_subj')), array("titel" => $title));
+          $subj = show(bbcode_mail(settings('eml_fabo_pedit_subj')), array("titel" => $title));
 
-           $message = show(re(settings('eml_fabo_pedit')), array("nick" => re($getabo['nick']),
+           $message = show(bbcode_mail(settings('eml_fabo_pedit')), array("nick" => re($getabo['nick']),
                                                                "postuser" => fabo_autor($userid),
                                                             "topic" => $gettopic['topic'],
                                                             "titel" => $title,
@@ -2179,9 +2179,9 @@ case 'post';
                             if($entrys == "0") $pagenr = "1";
                             else $pagenr = ceil($entrys/$maxfposts);
 
-                            $subj = show(re(settings('eml_fabo_npost_subj')), array("titel" => $title));
+                            $subj = show(bbcode_mail(settings('eml_fabo_npost_subj')), array("titel" => $title));
 
-                            $message = show(re(settings('eml_fabo_npost')), array("nick" => re($getabo['nick']),
+                            $message = show(bbcode_mail(settings('eml_fabo_npost')), array("nick" => re($getabo['nick']),
                                                                             "postuser" => fabo_autor($userid),
                                                                             "topic" => $gettopic['topic'],
                                                                             "titel" => $title,

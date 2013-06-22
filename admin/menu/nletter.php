@@ -64,7 +64,7 @@ if(_adminMenu != 'true') exit;
 		  } else {
         if($_POST['to'] == "reg")
         {
-				  $message = show(re(settings('eml_nletter')), array("text" => bbcode_nletter($_POST['eintrag'])));
+				  $message = show(bbcode_email(settings('eml_nletter')), array("text" => bbcode_nletter($_POST['eintrag'])));
 				  $subject = re(settings('eml_nletter_subj'));
 
           $qry = db("SELECT email FROM ".$db['users']."
@@ -81,7 +81,7 @@ if(_adminMenu != 'true') exit;
 		      $show = info(_msg_reg_answer_done, "?admin=nletter");
 
         } elseif($_POST['to'] == "member") {
-          $message = show(re(settings('eml_nletter')), array("text" => bbcode_nletter($_POST['eintrag'])));
+          $message = show(bbcode_email(settings('eml_nletter')), array("text" => bbcode_nletter($_POST['eintrag'])));
 				  $subject = re(settings('eml_nletter_subj'));
 
           $qry = db("SELECT email FROM ".$db['users']."
@@ -97,7 +97,7 @@ if(_adminMenu != 'true') exit;
 
 		      $show = info(_msg_member_answer_done, "?admin=nletter");
         } elseif($_POST['to'] == "leader") {
-          $message = show(re(settings('eml_nletter')), array("text" => bbcode_nletter($_POST['eintrag'])));
+          $message = show(bbcode_email(settings('eml_nletter')), array("text" => bbcode_nletter($_POST['eintrag'])));
 				  $subject = re(settings('eml_nletter_subj'));
 
           $qry = db("SELECT s2.email	FROM ".$db['squaduser']." AS s1
@@ -117,7 +117,7 @@ if(_adminMenu != 'true') exit;
 
 		      $show = info(_msg_member_answer_done, "?admin=nletter");
         } else {
-          $message = show(re(settings('eml_nletter')), array("text" => bbcode_nletter($_POST['eintrag'])));
+          $message = show(bbcode_email(settings('eml_nletter')), array("text" => bbcode_nletter($_POST['eintrag'])));
 				  $subject = re(settings('eml_nletter_subj'));
 
           $qry = db("SELECT s2.email FROM ".$db['squaduser']." AS s1

@@ -561,7 +561,12 @@ function bbcode($txt, $tinymce=0, $no_vid=0,$ts=0,$nolink=0)
     $txt = str_replace("&#34;","\"",$txt);
     return str_replace('<p></p>', '<p>&nbsp;</p>', $txt);
 }
-
+function bbcode_email($txt) {
+	$txt = bbcode($txt);
+	$txt = str_replace("&#91;","[",$txt);
+   	$txt = str_replace("&#93;","]",$txt);
+	return $txt;
+}
 function bbcode_nletter($txt)
 {
     $txt = stripslashes($txt);
@@ -1551,8 +1556,8 @@ function check_msg_emal()
         if($get['pnmail'] == 1)
         {
             db("UPDATE ".$db['msg']." SET `sendmail` = '1' WHERE id = '".$get['mid']."'");
-            $subj = show(re(settings('eml_pn_subj')), array("domain" => $httphost));
-            $message = show(re(settings('eml_pn')), array("nick" => re($get['nick']), "domain" => $httphost, "titel" => $get['titel'], "clan" => $clanname));
+            $subj = show(bbcode_email(settings('eml_pn_subj')), array("domain" => $httphost));
+            $message = show(bbcode_email(settings('eml_pn')), array("nick" => re($get['nick']), "domain" => $httphost, "titel" => $get['titel'], "clan" => $clanname));
             sendMail(re($get['email']), $subj, $message);
         }
     }
