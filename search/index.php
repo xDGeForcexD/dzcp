@@ -296,7 +296,7 @@ case 'site';
     $class = ($color % 2) ? "contentMainFirst" : "contentMainSecond"; $color++;
     $shownews .= show($dir."/search_show", array("class" => $class,
                                                "type" => 'news',
-                                               "href" => '../news/index.php?action=show&amp;id='.$get['id'],
+                                               "href" => '../news/index.php?action=show&amp;id='.$get['id']."&amp;hl=".$_GET['searchword'],
                                                "titel" => re($get['titel'])
                                               ));
   }
@@ -309,7 +309,7 @@ case 'site';
   {
     $class = ($color % 2) ? "contentMainFirst" : "contentMainSecond"; $color++;
     $showartikel .= show($dir."/search_show", array(
-                                               "href" => '../artikel/index.php?action=show&amp;id='.$get['id'],
+                                               "href" => '../artikel/index.php?action=show&amp;id='.$get['id']."&amp;hl=".$_GET['searchword'],
                                                "class" => $class,
                                                "type" => 'artikel',
                                                "titel" => re($get['titel'])
@@ -324,7 +324,7 @@ case 'site';
   {
     $class = ($color % 2) ? "contentMainFirst" : "contentMainSecond"; $color++;
     $showsites .= show($dir."/search_show", array(
-                                               "href" => '../sites/?show='.$get['id'],
+                                               "href" => '../sites/?show='.$get['id']."&amp;hl=".$_GET['searchword'],
                                                "class" => $class,
                                                "type" => 'site',
                                                "titel" => re($get['titel'])

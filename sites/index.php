@@ -30,6 +30,11 @@ default:
   
       if($get['html'] == "1") $inhalt = bbcode_html($get['text']);
       else $inhalt = bbcode($get['text']);
+		if(!empty($_GET['hl'])) {
+			$txt = hl($get['text'], $_GET['hl']);
+			$inhalt = bbcode($txt['text']); 
+			if($get['html'] == "1") $inhalt = bbcode_html($get['text']);
+		}
   
       $index = show($dir."/sites", array("titel" => re($get['titel']),
                                          "inhalt" => $inhalt));

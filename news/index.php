@@ -445,6 +445,11 @@ else
         }else{
             $newsimage = '../inc/images/newskat/'.$getkat['katimg'];
         }
+		$text = bbcode($get['text']);
+		if(!empty($_GET['hl'])) {
+			$ftxt = hl($get['text'], $_GET['hl']);
+			$text = bbcode($ftxt['text']);
+		}
 
         $title = re($get['titel']).' - '.$title;
         $index = show($dir."/news_show_full", array("titel" => re($get['titel']),
@@ -463,7 +468,7 @@ else
                                                "klapp" => $klapp,
                                                "more" => bbcode($get['klapptext']),
                                                "viewed" => "",
-                                               "text" => bbcode($get['text']),
+                                               "text" => $text,
                                                "datum" => date("j.m.y H:i", (empty($get['datum']) ? time() : $get['datum']))._uhr,
                                                "links" => $links,
                                                "autor" => autor($get['autor'])));

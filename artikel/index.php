@@ -228,6 +228,12 @@ case 'show';
                                             "seiten" => $seiten,
                                             "icq" => "",
                                             "add" => $add));
+	
+	$text = bbcode($get['text']);
+	if(!empty($_GET['hl'])) {
+		$ftxt = hl($get['text'], $_GET['hl']);
+		$text = bbcode($ftxt['text']);
+	}
 
     $index = show($dir."/show_more", array("titel" => re($get['titel']),
                                            "id" => $get['id'],
@@ -239,7 +245,7 @@ case 'show';
                                            "ndatum" => _datum,
                                            "showmore" => $showmore,
                                            "icq" => "",
-                                           "text" => bbcode($get['text']),
+                                           "text" => $text,
                                            "datum" => date("j.m.y H:i", intval($get['datum']))._uhr,
                                            "links" => $links,
                                            "autor" => autor($get['autor'])));
