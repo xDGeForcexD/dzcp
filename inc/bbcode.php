@@ -2248,12 +2248,15 @@ function check_internal_url()
 	if(strpos($pfad, "?") === false && strpos($pfad, ".php") === false) {
 		$pfad .= "/";
 	}
-	$qry_navi = db("SELECT * FROM ".$db['navi']." WHERE url = '".$pfad."' AND internal = 1 ");
+	$qry_navi = db("SELECT * FROM ".$db['navi']." WHERE url = '".$pfad."'");
 	if(_rows($qry_navi) == 0) {
 		list($pfad,$rest) = split('\?',$pfad);
-		$qry_navi = db("SELECT * FROM ".$db['navi']." WHERE url = '".$pfad." AND internal = 1'");
-		if(_rows($qry_navi) == 1) return true;
-	} else return true;
+		$qry_navi = db("SELECT * FROM ".$db['navi']." WHERE url = '".$pfad."'");
+		if(_rows($qry_navi) == 0) $qry_navi = db("SELECT * FROM ".$db['navi']." WHERE url = '".str_replace("index.php","",$pfad)."'");
+	} 
+	$get_navi = _fetch($qry_navi);
+	if($get_navi['internal']) return true;
+	return false;
 }
 //-> Ladezeit
 function generatetime()
