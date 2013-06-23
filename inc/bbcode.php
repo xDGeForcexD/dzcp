@@ -417,19 +417,17 @@ function BadwordFilter($txt)
     { $txt = preg_replace("#".$word."#i", str_repeat("*", strlen($word)), $txt); }
     return $txt;
 }
-
 //-> Funktion um Bestimmte Textstellen zu markieren
 function hl($text, $word)
 {
     if(!empty($_GET['hl']) && $_SESSION['search_type'] == 'text')
     {
         if($_SESSION['search_con'] == 'or')
-        {
+        {	
             $words = explode(" ",$word);
             for($x=0;$x<count($words);$x++)
                 $ret['text'] = preg_replace("#".$words[$x]."#i",'<span class="fontRed" title="'.$words[$x].'">'.$words[$x].'</span>',$text);
-        }
-        else
+        } else 
             $ret['text'] = preg_replace("#".$word."#i",'<span class="fontRed" title="'.$word.'">'.$word.'</span>',$text);
 
         if(!preg_match("#<span class=\"fontRed\" title=\"(.*?)\">#", $ret['text']))
@@ -2233,33 +2231,30 @@ function pholderreplace($pholder)
     $pholder = str_replace("[","",$pholder);
     return str_replace("]","",$pholder);
 }
-
 //-> Zugriff auf die Seite
 function check_internal_url()
 {
     global $db,$chkMe;
-    $url = '..'.str_ireplace(array('index.php','send.php'),'',str_ireplace(str_ireplace('\\','/',basePath),'',$_SERVER['SCRIPT_FILENAME']));
-    $url_query = $url.'?'.$_SERVER['QUERY_STRING'];
-    $sql_url_query = db("SELECT internal FROM `".$db['navi']."` WHERE `url` LIKE '".$url_query."' LIMIT 1");
-    $sql_url = db("SELECT internal FROM `".$db['navi']."` WHERE `url` LIKE '".$url."' LIMIT 1");
-    $sql_found_row = false;
-    if(_rows($sql_url_query))
-    {
-        $sql_found_row = true;
-        $get = _fetch($sql_url_query);
-        if(($get['internal'] && $chkMe == 'unlogged'))
-            return true;
-    }
-    else if(_rows($sql_url) && !$sql_found_row)
-    {
-        $get = _fetch($sql_url);
-        if(($get['internal'] && $chkMe == 'unlogged'))
-            return true;
-    }
-
+    $install_pfad = explode("/",dirname(dirname($_SERVER['SCRIPT_NAME'])."../"));
+	$now_pfad = explode("/",$_SERVER['REQUEST_URI']);
+	foreach($now_pfad as $key => $value) {
+		if($value != $install_pfad[$key]) {
+			$pfad .= "/".$value;
+		}
+	}
+	list($pfad,$rest) = split('&',$pfad);
+	$pfad = "..".$pfad;
+	if(strpos($pfad, "?") === false && strpos($pfad, ".php") === false) {
+		$pfad .= "/";
+	}
+	$qry_navi = db("SELECT * FROM ".$db['navi']." WHERE url = '".$pfad."' AND internal = 1 ");
+	if(_rows($qry_navi) == 0) {
+		list($pfad,$rest) = split('\?',$pfad);
+		$qry_navi = db("SELECT * FROM ".$db['navi']." WHERE url = '".$pfad." AND internal = 1'");
+		if(_rows($qry_navi) == 1) return true;
+	} else return true;
     return false;
 }
-
 //-> Ladezeit
 function generatetime()
 {
@@ -2409,7 +2404,11 @@ function page($index,$title,$where,$time,$wysiwyg='',$index_templ='index')
         $rss = $clanname;
         $dir = $designpath;
         $title = re(strip_tags($title));
-
+			echo "TEST";
+		if(check_internal_url()) {
+			echo "TEST";
+			$index = error(_error_have_to_be_logged, 1);
+		}
         $where = preg_replace_callback("#autor_(.*?)$#",create_function('$id', 'return data("$id[1]","nick");'),$where);
         $index = empty($index) ? '' : (empty($check_msg) ? '' : $check_msg).'<table class="mainContent" cellspacing="1" style="margin-top:0">'.$index.'</table>';
 
