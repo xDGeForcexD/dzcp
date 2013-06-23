@@ -288,6 +288,7 @@ default:
                                       ));
 break;
 case 'site';
+	$_SESSION['search_type'] = 'text';
     $qry = db("SELECT * FROM ".$db['news']." 
              WHERE (titel LIKE '%".up($_GET['searchword'])."%' AND titel != '') OR (text LIKE '%".up($_GET['searchword'])."%' AND `text` != '')
              ORDER BY titel ASC");

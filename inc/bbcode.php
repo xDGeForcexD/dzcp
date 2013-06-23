@@ -419,7 +419,7 @@ function BadwordFilter($txt)
 }
 //-> Funktion um Bestimmte Textstellen zu markieren
 function hl($text, $word)
-{
+{	
     if(!empty($_GET['hl']) && $_SESSION['search_type'] == 'text')
     {
         if($_SESSION['search_con'] == 'or')
@@ -428,7 +428,7 @@ function hl($text, $word)
             for($x=0;$x<count($words);$x++)
                 $ret['text'] = preg_replace("#".$words[$x]."#i",'<span class="fontRed" title="'.$words[$x].'">'.$words[$x].'</span>',$text);
         } else 
-            $ret['text'] = preg_replace("#".$word."#i",'<span class="fontRed" title="'.$word.'">'.$word.'</span>',$text);
+            $ret['text'] = preg_replace("#".$word."#i",'<span class="fontRed" title="'.$word.'">$0</span>',$text);
 
         if(!preg_match("#<span class=\"fontRed\" title=\"(.*?)\">#", $ret['text']))
             $ret['class'] = 'class="commentsRight"';
