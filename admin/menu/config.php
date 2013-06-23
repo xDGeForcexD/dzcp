@@ -172,11 +172,9 @@ if(_adminMenu != 'true') exit;
         $files = get_files('../inc/lang/languages/',false,true,array('php'));
         for($i=0; $i<count($files); $i++)
         {
-          if($gets['language'] == $files[$i]) $sel = "selected=\"selected\"";
-          else $sel = "";
-
           $lng = preg_replace("#.php#", "",$files[$i]);
-
+		  $sel = "";
+          if($gets['language'] == $lng) $sel = "selected=\"selected\"";
           $lang .= show(_select_field, array("value" => $lng,
                                              "what" => $lng,
                                              "sel" => $sel));
