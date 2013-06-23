@@ -2404,9 +2404,7 @@ function page($index,$title,$where,$time,$wysiwyg='',$index_templ='index')
         $rss = $clanname;
         $dir = $designpath;
         $title = re(strip_tags($title));
-			echo "TEST";
 		if(check_internal_url()) {
-			echo "TEST";
 			$index = error(_error_have_to_be_logged, 1);
 		}
         $where = preg_replace_callback("#autor_(.*?)$#",create_function('$id', 'return data("$id[1]","nick");'),$where);
