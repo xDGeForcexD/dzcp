@@ -2235,7 +2235,8 @@ function pholderreplace($pholder)
 function check_internal_url()
 {
     global $db,$chkMe;
-    $install_pfad = explode("/",dirname(dirname($_SERVER['SCRIPT_NAME'])."../"));
+	if($chkMe != "unlogged") return false;
+	$install_pfad = explode("/",dirname(dirname($_SERVER['SCRIPT_NAME'])."../"));
 	$now_pfad = explode("/",$_SERVER['REQUEST_URI']);
 	foreach($now_pfad as $key => $value) {
 		if($value != $install_pfad[$key]) {
@@ -2253,7 +2254,6 @@ function check_internal_url()
 		$qry_navi = db("SELECT * FROM ".$db['navi']." WHERE url = '".$pfad." AND internal = 1'");
 		if(_rows($qry_navi) == 1) return true;
 	} else return true;
-    return false;
 }
 //-> Ladezeit
 function generatetime()
